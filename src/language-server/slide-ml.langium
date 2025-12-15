@@ -1,105 +1,148 @@
-grammar SlideMl
-
-entry App:
-    'app' name=ID
-    'initial' 'state' initial=[State:ID]
-    ('use' useSerialMonitor=COMPONENT)?
-    '{'
-        'bricks'
-        bricks+=Brick
-        (bricks+=Brick)*
+grammar SlideML
 
 
-        'states'
-        states+=State
-    ( states+=State)*
-    '}';
+entry Model:
+    (definitions+=(Template | Presentation))*;
 
-Brick:
-    Actuator
-    | Sensor
-    | LCDBrick
+
+Template:
+    'template' name=ID '{'
+    ('style' style=TemplateStyle)?
+    ('titleTemplate' titleTemplate=Element)?
+    ('bodyTemplate' bodyTemplate=Element)?
+  '}';
+
+TemplateStyle:
+    'templateStyle' '{'
+    ('backgroundColor' ':' backgroundColor=STRING)?
+    ('defaultFont' ':' defaultFont=Font)?
+    ('defaultTransition' ':' defaultTransition=Transition)?
+  '}';
+
+
+
+Presentation:
+    'presentation' name=STRING '{'
+    ('author' author=STRING)?
+    ('displaySlideNumber' displaySlideNumber=BOOLEAN)?
+    ('template' template=[Template])?
+    slides+=Slide+
+  '}';
+
+Slide:
+    'slide' '{'
+    ('annotable' annotable=BOOLEAN)?
+    ('entryTransition' entryTransition=Transition)?
+    elements+=Element*
+  '}';
+
+
+
+Element infers Element:
+    content=(Group | Text | Image | Video | Quiz)
+  ('style' style=Style)?
+  ('position' position=Position)?
+  ('animation' animation=Animation)?
 ;
 
-Actuator:
-    {infer Actuator}
-    'Actuator' name=ID ':' outputPin=INT;
-
-Sensor :
-    {infer Sensor}
-    'Sensor' name=ID ':' inputPin=INT;
-
-State :
-	name=ID '{'
-		(actions+=Action)*
-		transition=Transition
-	'}';
-
-LCDBrick:
-    {infer LCDBrick}
-    'LCD' name=ID;
-
-Action :
-    SetAction | SendAction;
-
-SetAction:
-    actuator=[Actuator:ID] '<=' value=Signal;
-
-SendAction:
-    'send' message=STRING
-    | lcd=[LCDBrick:ID] 'displays' lcdMessage=LCDMessage;
-
-LCDMessage:
-    parts+=LCDMessagePart ('+' parts+=LCDMessagePart)*;
-
-LCDMessagePart:
-    ConstantText | BrickValueRef;
-
-ConstantText:
-    value=STRING;
-
-BrickValueRef:
-    brick=[Brick:ID];
-
-Transition:
-	BooleanExpression '=>' (next=[State:ID] | 'error' errorCode=INT);
-
-BooleanExpression:
-    SignalTransition | TemporalTransition | MessageTransition | ConditionList;
-
-
-ConditionList infers BooleanExpression:
-    connector=Logic '{'
-        transitions+=BooleanExpression
-        (transitions+=BooleanExpression)+
+Group infers Element:
+    'group' '{'
+    elements+=Element
+    (elements+=Element)*
     '}';
 
-TemporalTransition:
-	'after' delay=INT 'ms';
+Text:
+    'text' content=STRING
+  ('type' type=TextType)?
+  ('alignment' alignment=TextAlignment)?
+  (Code | Equation | List)?
+;
 
-SignalTransition:
-    sensor=[Sensor:ID] 'is' value=Signal;
+Code:
+    'code' 'language' language=STRING;
+Equation:
+    'equation' equation=STRING;
 
-MessageTransition:
-    'receives' (pattern=STRING | any?='any');
+List:
+    'list:{' 'ordered:' ordered=BOOLEAN 'content:' '{' items+=STRING+ '}}';
 
-Signal:
-	value=(HIGH | LOW);
-Logic:
-	value=(AND | OR);
+Image:
+    'image' link=STRING;
+Video:
+    'video' link=STRING;
+Quiz:
+    'quiz' question=STRING;
 
-terminal HIGH: 'HIGH';
-terminal LOW: 'LOW';
 
-terminal AND: 'AND';
-terminal OR: 'OR';
+Style:
+    'style' '{'
+    ('size' ':' size=NUMBER)?
+    ('backgroundColor' ':' backgroundColor=STRING)?
+    ('font' ':' font=Font)?
+  '}';
 
-terminal COMPONENT: 'SerialMonitor';
+Font:
+    'font' '{'
+    ('name' ':' name=STRING)?
+    ('size' ':' size=NUMBER)?
+    ('color' ':' color=STRING)?
+    ('transformations' ':' '[' transformations+=FontTransformation (',' transformations+=FontTransformation)* ']')?
+  '}';
 
-hidden terminal WS: /\s+/;
-terminal ID: /[_a-zA-Z][\w_]*/;
-terminal INT returns number: /[0-9]+/;
-terminal STRING: /"[^"]*"|'[^']*'/;
+terminal FontTransformation: 'BOLD' | 'ITALIC' | 'UNDERLINE';
 
-hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
-hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
+
+Position:
+    'position' '{'
+    ('x' ':' x=XPosition)?
+    ('y' ':' y=YPosition)?
+    ('z' ':' z=ZPosition)?
+  '}';
+
+XPosition:
+    CoordinatePosition | EnumXPosition;
+YPosition:
+    CoordinatePosition | EnumYPosition;
+ZPosition:
+    CoordinatePosition | EnumZPosition;
+
+CoordinatePosition:
+    value=NUMBER;
+
+terminal EnumXPosition: 'LEFT' | 'CENTER' | 'RIGHT';
+terminal EnumYPosition: 'TOP' | 'CENTER' | 'BOTTOM';
+terminal EnumZPosition: 'FRONT' | 'BEHIND';
+
+
+Animation:
+    SimpleAnimation | ComplexAnimation;
+
+SimpleAnimation:
+    'animation' name=STRING;
+
+ComplexAnimation:
+    'complexAnimation' '{'
+    'duration' ':' duration=NUMBER 'ms'
+    'animationType' ':' animationType=AnimationType
+  '}';
+
+terminal AnimationType: 'FADE_IN' | 'ZOOM_IN';
+
+Transition:
+    'transition' '{'
+    ('duration' ':' duration=NUMBER 'ms')?
+    ('type' ':' type=TransitionType)?
+  '}';
+
+terminal TransitionType: 'SLIDE_LEFT' | 'SLIDE_TOP';
+
+
+terminal TextAlignment: 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFY';
+terminal TextType: 'TITLE' | 'SUBTITLE' | 'BODY';
+
+
+
+terminal BOOLEAN: /true|false/;
+terminal NUMBER: /-?\d+(\.\d+)?/;
+terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;
+terminal STRING: /"([^"\\]*(\\.[^"\\]*)*)"/;
