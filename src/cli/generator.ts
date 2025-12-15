@@ -21,7 +21,7 @@ export function generateInoFile(
     destination: string | undefined
 ): string {
     const data = extractDestinationAndName(filePath, destination);
-    const generatedFilePath = `${path.join(data.destination, data.name)}.ino`;
+    const generatedFilePath = `${path.join(data.destination, data.name)}.html`;
 
     const fileNode = new CompositeGeneratorNode();
     compile(app, fileNode);
