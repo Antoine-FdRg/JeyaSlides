@@ -1,0 +1,12 @@
+# Node
+node_modules
+generated
+out
+
+.idea
+*.iml
+.vscode
+
+langium
+src/language-server/generated
+syntaxes

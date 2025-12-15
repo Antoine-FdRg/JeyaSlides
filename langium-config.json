@@ -1,0 +1,12 @@
+{
+    "projectName": "JeyaSlides",
+    "languages": [{
+        "id": "slide-ml",
+        "grammar": "src/language-server/slide-ml.langium",
+        "fileExtensions": [".aml"],
+        "textMate": {
+            "out": "syntaxes/slide-ml.tmLanguage.json"
+        }
+    }],
+    "out": "src/language-server/generated"
+}
