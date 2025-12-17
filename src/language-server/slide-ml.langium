@@ -2,146 +2,153 @@ grammar SlideML
 
 
 entry Model:
-    (definitions+=(Template | Presentation))*;
+  (
+      definitions+=Template
+      (definitions+=Presentation)?
+    ) | (
+      (definitions+=Template)?
+      presentations+=Presentation
+    );
 
 
 Template:
-    'template' name=ID '{'
-    ('style' style=TemplateStyle)?
+  'template' name=ID '{'
+    (style=TemplateStyle)?
     ('titleTemplate' titleTemplate=Element)?
     ('bodyTemplate' bodyTemplate=Element)?
   '}';
 
 TemplateStyle:
-    'templateStyle' '{'
-    ('backgroundColor' ':' backgroundColor=STRING)?
-    ('defaultFont' ':' defaultFont=Font)?
-    ('defaultTransition' ':' defaultTransition=Transition)?
+  'style' '{'
+    ('backgroundColor' backgroundColor=COLOR)?
+    (font=Font)?
+    (transition=Transition)?
   '}';
 
-
-
 Presentation:
-    'presentation' name=STRING '{'
+  'presentation' name=STRING '{'
     ('author' author=STRING)?
     ('displaySlideNumber' displaySlideNumber=BOOLEAN)?
-    ('template' template=[Template])?
+    ('template' template=STRING)?
     slides+=Slide+
   '}';
 
 Slide:
-    'slide' '{'
+  'slide' '{'
     ('annotable' annotable=BOOLEAN)?
-    ('entryTransition' entryTransition=Transition)?
-    elements+=Element*
+    (transition=Transition)?
+    elements+=Element
   '}';
 
-
-
 Element infers Element:
-    content=(Group | Text | Image | Video | Quiz)
-  ('style' style=Style)?
-  ('position' position=Position)?
-  ('animation' animation=Animation)?
+  (Text | Image | Video | Quiz) 
+    (style=Style)?
+    (position=Position)?
+    (animation=Animation)? 
+  '}' | 
+  Group 
+    (style=Style)?
+    (position=Position)?
+    (animation=Animation)? 
+  ']'
 ;
 
 Group infers Element:
-    'group' '{'
+  '['
     elements+=Element
-    (elements+=Element)*
-    '}';
+    (elements+=Element)*;
 
 Text:
-    'text' content=STRING
-  ('type' type=TextType)?
-  ('alignment' alignment=TextAlignment)?
-  (Code | Equation | List)?
-;
+  Code | BasicText;
 
 Code:
-    'code' 'language' language=STRING;
-Equation:
-    'equation' equation=STRING;
+  'code' 
+  '{'
+  language=STRING content=STRING;
+
+BasicText:
+  (Paragraph | List) 'align' TextAlignment;
+
+Paragraph:
+  type=TextType  '{' content=STRING;
 
 List:
-    'list:{' 'ordered:' ordered=BOOLEAN 'content:' '{' items+=STRING+ '}}';
+  'list'  '{' ('ordered' ordered=BOOLEAN)? '[' items+=STRING (',' items+=STRING)* ']';
 
 Image:
-    'image' link=STRING;
+  'image' '{' link=STRING;
 Video:
-    'video' link=STRING;
+  'video' '{' link=STRING;
 Quiz:
-    'quiz' question=STRING;
-
+  'quiz' '{' question=STRING;
 
 Style:
-    'style' '{'
-    ('size' ':' size=NUMBER)?
-    ('backgroundColor' ':' backgroundColor=STRING)?
-    ('font' ':' font=Font)?
+  'style' '{'
+    (size=Size)?
+    ('backgroundColor' backgroundColor=COLOR)?
+    (font=Font)?
+    ('rotation' rotation=NUMBER)?
   '}';
+
+Size:
+  (
+    ('width' width=NUMBER) ('height' height=NUMBER)?
+  ) | (
+    ('width' width=NUMBER)? ('height' height=NUMBER)
+  );
 
 Font:
-    'font' '{'
-    ('name' ':' name=STRING)?
-    ('size' ':' size=NUMBER)?
-    ('color' ':' color=STRING)?
-    ('transformations' ':' '[' transformations+=FontTransformation (',' transformations+=FontTransformation)* ']')?
+  'font' '{'
+    ('name' name=STRING)?
+    ('size' size=NUMBER)?
+    ('color' color=COLOR)?
+    ('transformations' '[' transformations+=FontTransformation (',' transformations+=FontTransformation)* ']')?
   '}';
 
-terminal FontTransformation: 'BOLD' | 'ITALIC' | 'UNDERLINE';
+terminal FontTransformation: 'bold' | 'italic' | 'underline';
 
 
 Position:
-    'position' '{'
+  'position' '{'
     ('x' ':' x=XPosition)?
     ('y' ':' y=YPosition)?
     ('z' ':' z=ZPosition)?
   '}';
 
 XPosition:
-    CoordinatePosition | EnumXPosition;
+  CoordinatePosition | EnumXPosition;
 YPosition:
-    CoordinatePosition | EnumYPosition;
+  CoordinatePosition | EnumYPosition;
 ZPosition:
-    CoordinatePosition | EnumZPosition;
+  CoordinatePosition | EnumZPosition;
 
 CoordinatePosition:
-    value=NUMBER;
+  value=NUMBER;
 
-terminal EnumXPosition: 'LEFT' | 'CENTER' | 'RIGHT';
-terminal EnumYPosition: 'TOP' | 'CENTER' | 'BOTTOM';
-terminal EnumZPosition: 'FRONT' | 'BEHIND';
+terminal EnumXPosition: 'left' | 'center' | 'right';
+terminal EnumYPosition: 'top' | 'center' | 'bottom';
+terminal EnumZPosition: 'front' | 'behind';
 
 
 Animation:
-    SimpleAnimation | ComplexAnimation;
-
-SimpleAnimation:
-    'animation' name=STRING;
+  "animation" '{' 'order' order=NUMBER? ComplexAnimation? '}';
 
 ComplexAnimation:
-    'complexAnimation' '{'
-    'duration' ':' duration=NUMBER 'ms'
-    'animationType' ':' animationType=AnimationType
-  '}';
+  'type' animationType=AnimationType ('duration' duration=NUMBER)?;
 
-terminal AnimationType: 'FADE_IN' | 'ZOOM_IN';
+terminal AnimationType: 'fade-in' | 'zoom-in';
 
 Transition:
-    'transition' '{'
-    ('duration' ':' duration=NUMBER 'ms')?
-    ('type' ':' type=TransitionType)?
-  '}';
+  'transition' '{' 'type' type=TransitionType ('duration' duration=NUMBER)? '}';
 
-terminal TransitionType: 'SLIDE_LEFT' | 'SLIDE_TOP';
+terminal TransitionType: 'slide-left' | 'slide-top';
 
 
-terminal TextAlignment: 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFY';
-terminal TextType: 'TITLE' | 'SUBTITLE' | 'BODY';
+terminal TextAlignment: 'left' | 'center' | 'right' | 'justify';
+terminal TextType: 'title' | 'subtitle' | 'text';
 
 
-
+terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
 terminal BOOLEAN: /true|false/;
 terminal NUMBER: /-?\d+(\.\d+)?/;
 terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;
