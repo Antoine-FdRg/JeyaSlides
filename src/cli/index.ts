@@ -1,37 +1,37 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { App } from '../language-server/generated/ast';
-import { SlideMlLanguageMetaData as SlideMlLanguageMetaData } from '../language-server/generated/module';
+import { Model } from '../language-server/generated/ast';
+import { SlideMLLanguageMetaData } from '../language-server/generated/module';
 import { createSlideMlServices } from '../language-server/slide-ml-module';
 import { extractAstNode } from './cli-util';
-import { generateInoFile } from './generator';
+import { generateRevealJsFile } from './generator';
 import { NodeFileSystem } from 'langium/node';
 
 export const generateAction = async (fileName: string, opts: GenerateOptions): Promise<void> => {
-    const services = createSlideMlServices(NodeFileSystem).SlideMl;
-    const app = await extractAstNode<App>(fileName, services);
-    const generatedFilePath = generateInoFile(app, fileName, opts.destination);
-    console.log(chalk.green(`HTML code generated successfully: ${generatedFilePath}`));
+  const services = createSlideMlServices(NodeFileSystem).SlideMl;
+  const model = await extractAstNode<Model>(fileName, services);
+  const generatedFilePath = generateRevealJsFile(model, fileName, opts.destination);
+  console.log(chalk.green(`HTML code generated successfully: ${generatedFilePath}`));
 };
 
 export type GenerateOptions = {
-    destination?: string;
-}
+  destination?: string;
+};
 
 export default function (): void {
-    const program = new Command();
+  const program = new Command();
 
-    program
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        .version(require('../../package.json').version);
+  program
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    .version(require('../../package.json').version);
 
-    const fileExtensions = SlideMlLanguageMetaData.fileExtensions.join(', ');
-    program
-        .command('generate')
-        .argument('<file>', `source file (possible file extensions: ${fileExtensions})`)
-        .option('-d, --destination <dir>', 'destination directory of generating')
-        .description('generates JavaScript code that prints "Hello, {name}!" for each greeting in a source file')
-        .action(generateAction);
+  const fileExtensions = SlideMLLanguageMetaData.fileExtensions.join(', ');
+  program
+    .command('generate')
+    .argument('<file>', `source file (possible file extensions: ${fileExtensions})`)
+    .option('-d, --destination <dir>', 'destination directory of generating')
+    .description('generates HTML Reveal.js presentation from SlideML source file')
+    .action(generateAction);
 
-    program.parse(process.argv);
+  program.parse(process.argv);
 }
