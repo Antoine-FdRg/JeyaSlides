@@ -1,0 +1,10 @@
+﻿presentation "TestPresentation" {
+  author "Emma"
+  slide {
+    title { "Hello" align center } 
+  }
+
+  slide {
+    text { "World" align left } 
+  }
+}

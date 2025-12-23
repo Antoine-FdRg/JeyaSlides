@@ -1,24 +1,24 @@
-import { ValidationAcceptor, ValidationChecks } from 'langium';
-import { JeyaSlidesAstType, Model } from './generated/ast';
+import { AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
+import { JeyaSlidesAstType, Model, isModel } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
-/**
- * Register custom validation checks.
- */
 export function registerValidationChecks(services: SlideMLServices) {
   const registry = services.validation.ValidationRegistry;
   const validator = services.validation.SlideMLValidator;
-  const checks: ValidationChecks<JeyaSlidesAstType> = {
-    Model: validator.checkNothing,
+
+  const checks: ValidationChecks<AstTypeList<JeyaSlidesAstType>> = {
+    Model: (node, accept) => {
+      if (isModel(node)) {
+        validator.checkNothing(node, accept);
+      }
+    },
   };
+
   registry.register(checks, validator);
 }
 
-/**
- * Implementation of custom validations.
- */
 export class SlideMLValidator {
   checkNothing(model: Model, accept: ValidationAcceptor): void {
-    // Add validation logic here
+    // validations...
   }
 }

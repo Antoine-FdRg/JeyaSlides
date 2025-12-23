@@ -1,413 +1,99 @@
-import fs from "fs";
-import { CompositeGeneratorNode, NL, toString } from "langium";
-import path from "path";
-import {
-    Action,
-    Actuator,
-    App,
-    MessageTransition,
-    SendAction,
-    Sensor,
-    SignalTransition,
-    State,
-    TemporalTransition,
-    Transition,
-} from "../language-server/generated/ast";
-import { extractDestinationAndName } from "./cli-util";
+import fs from 'fs';
+import { CompositeGeneratorNode, toString } from 'langium';
+import path from 'path';
+import { Model, Presentation, Slide } from '../language-server/generated/ast';
+import { extractDestinationAndName } from './cli-util';
 
-export function generateInoFile(
-    app: App,
-    filePath: string,
-    destination: string | undefined
-): string {
-    const data = extractDestinationAndName(filePath, destination);
-    const generatedFilePath = `${path.join(data.destination, data.name)}.html`;
+export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
+  const data = extractDestinationAndName(filePath, destination);
+  const generatedFilePath = `${path.join(data.destination, data.name)}.html`;
 
-    const fileNode = new CompositeGeneratorNode();
-    compile(app, fileNode);
+  const fileNode = new CompositeGeneratorNode();
+  generateRevealJs(model, fileNode);
 
-    if (!fs.existsSync(data.destination)) {
-        fs.mkdirSync(data.destination, { recursive: true });
-    }
-    fs.writeFileSync(generatedFilePath, toString(fileNode));
-    return generatedFilePath;
+  if (!fs.existsSync(data.destination)) {
+    fs.mkdirSync(data.destination, { recursive: true });
+  }
+  fs.writeFileSync(generatedFilePath, toString(fileNode));
+  return generatedFilePath;
 }
 
-
-function compile(app: App, fileNode: CompositeGeneratorNode) {
-    const hasSerial = hasSerialCommunication(app);
-
-    for (const brick of app.bricks) {
-        if (brick.$type === "LCDBrick") {
-            (brick as any).rs = 10;
-            (brick as any).enable = 11;
-            (brick as any).d4 = 12;
-            (brick as any).d5 = 13;
-            (brick as any).d6 = 14;
-            (brick as any).d7 = 15;
-            (brick as any).d8 = 16;
-            (brick as any).columns = 16;
-            (brick as any).rows = 2;
+function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode) {
+  // Generate HTML header
+  fileNode.append(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
         }
-    }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">`);
 
-    fileNode.append(
-        `// Wiring code generated from an SlideML model
-// Application name: ` + app.name + `
-` + (hasSerial ? `// Serial communication: 9600 baud (Standard Arduino Uno)
-` : ``) + `
-long debounce = 200;
-long stateEnteredTime = 0;
-int lastState = -1;
-` + (hasSerial ? `bool notPrint = true;
-` : ``) + `enum STATE {` +
-        app.states.map((s) => s.name).join(", "));
-    if (isUsingErrorState(app)) {
-        const errorCodes = getErrorCodes(app);
-        const uniqueErrorCodes = Array.from(new Set(errorCodes));
-        for (const code of uniqueErrorCodes) {
-            fileNode.append(`, error_` + code);
-        }
-    }
-    fileNode.append(`};
+  // Generate slides for each presentation
+  const presentations = (model as any).presentations ?? [];
+  for (const presentation of presentations) {
+    generatePresentationSlides(presentation, fileNode);
+  }
 
-STATE currentState = ` +
-        app.initial.ref?.name +
-        `;`,
-        NL
-    );
+  fileNode.append(`
+        </div>
+    </div>
 
-    const lcdBrick = app.bricks.find(b => b.$type === "LCDBrick");
-
-    let lcdName: string | undefined = undefined;
-    let columns = 16;
-    let rows = 2;
-
-    if (lcdBrick) {
-        lcdName = lcdBrick.name;
-        columns = (lcdBrick as any).columns ?? 16;
-        rows = (lcdBrick as any).rows ?? 2;
-    }
-
-    if (app.bricks.some(b => "rs" in b)) {
-        fileNode.append(`
-#include <LiquidCrystal.h>
-LiquidCrystal ${lcdName}(10, 11, 12, 13, 14, 15, 16);
-`);
-    }
-
-    for (const brick of app.bricks) {
-        if (brick.$type === 'Sensor') {
-            fileNode.append(
-                `
-bool ` +
-                brick.name +
-                `BounceGuard = false;
-long ` +
-                brick.name +
-                `LastDebounceTime = 0;`,
-                NL
-            );
-        }
-    }
-    fileNode.append(`
-
-void setup() {`);
-
-    if (hasSerial) {
-        fileNode.append(`
-    Serial.begin(9600);
-    while(!Serial) { ; } // Wait for serial port`);
-    }
-
-    for (const brick of app.bricks) {
-        if (brick.$type === 'Sensor') {
-            compileSensor(brick, fileNode);
-        } else if (brick.$type === 'Actuator') {
-            compileActuator(brick, fileNode);
-        } else if ("rs" in brick) {
-        }
-    }
-
-    if (app.bricks.some(b => "rs" in b)) {
-        fileNode.append(`
-    ${lcdName}.begin(${columns}, ${rows});`);
-    }
-
-    compileErrorLedActuatorCode(app, fileNode);
-
-    fileNode.append(`
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            center: true,
+            transition: 'slide',
+            width: 960,
+            height: 700,
+            margin: 0.1,
+            minScale: 0.2,
+            maxScale: 2.0
+        });
+    <\/script>
+</body>
+</html>`);
 }
 
-void loop() {`);
-    if (hasSerial) {
-        fileNode.append(`
-    String serialInput = "";
-    if (Serial.available() > 0) {
-        serialInput = Serial.readStringUntil('\\n');
-        serialInput.trim();
-    }
-`, NL);
-    }
-    fileNode.append(`
-    if ((int)currentState != lastState) {
-        stateEnteredTime = millis();
-        lastState = (int)currentState;
-    }
+function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
+  // Generate title slide
+  let author = presentation.author ?? 'Anonymous';
+  if (author.startsWith('"') && author.endsWith('"')) {
+    author = author.substring(1, author.length - 1);
+  }
 
-    switch (currentState) {`);
+  let title = presentation.name;
+  if (title.startsWith('"') && title.endsWith('"')) {
+    title = title.substring(1, title.length - 1);
+  }
 
-    for (const state of app.states) {
-        compileState(state, fileNode, hasSerial);
-    }
-    if (isUsingErrorState(app)) {
-        const errorCodes = getErrorCodes(app);
-        const uniqueErrorCodes = Array.from(new Set(errorCodes));
-        for (const code of uniqueErrorCodes) {
-            fileNode.append(`
-        case error_` + code + `:
-            errorBlink(` + code + `);
-            break;`, NL);
-        }
-    }
-    fileNode.append(
-        `
-    }
-}`, NL);
+  fileNode.append(`
+            <section>
+                <h1>${title}</h1>
+                <p>by ${author}</p>
+            </section>`);
 
-    if (isUsingErrorState(app)) {
-        generateErrorMethodCode(fileNode);
-    }
+  // Generate content slides
+  for (const slide of presentation.slides) {
+    generateSlide(slide, fileNode);
+  }
 }
 
-function hasSerialCommunication(app: App) {
-    const hasSerialSensor = app.useSerialMonitor !== undefined;
-    const hasSendAction = app.states.some(state => state.actions.some(action => action.$type === 'SendAction'));
-    return hasSerialSensor || hasSendAction;
-}
-
-function compileActuator(actuator: Actuator, fileNode: CompositeGeneratorNode) {
-    fileNode.append(
-        `
-    pinMode(` +
-        actuator.outputPin +
-        `, OUTPUT); // ` +
-        actuator.name +
-        ` [Actuator]`
-    );
-}
-
-function compileSensor(sensor: Sensor, fileNode: CompositeGeneratorNode) {
-    fileNode.append(`
-    pinMode(` + (sensor as any).inputPin + `, INPUT); // ` + sensor.name + ` [Sensor]`)
-
-}
-
-function compileState(state: State, fileNode: CompositeGeneratorNode, hasSerial: boolean) {
-    fileNode.append(`
-        case `+ state.name + `:`);
-
-    for (const action of state.actions) {
-        compileAction(action, fileNode);
-    }
-
-    if (state.transition !== null) {
-        compileTransition(state.transition, fileNode);
-    }
-
-    fileNode.append(NL, `\t\t\tbreak;`, NL);
-}
-
-function compileAction(action: Action, fileNode: CompositeGeneratorNode) {
-    if (action.$type === 'SendAction') {
-
-        if (action.lcd) {
-            compileLCDAction(action, fileNode);
-            return;
-        }
-        let message = action.message;
-        if (message && message.startsWith('"') && message.endsWith('"')) {
-            message = message.substring(1, message.length - 1);
-        }
-        fileNode.append(`
-            if (notPrint) {
-                Serial.println("` + message + `");
-                notPrint = false;
-            }`);
-        return
-    }
-    fileNode.append(`
-            digitalWrite(` + action.actuator?.ref?.outputPin + `, ` + action.value?.value + `);`);
-
-}
-
-function compileLCDAction(action: SendAction, fileNode: CompositeGeneratorNode) {
-    if (!action.lcdMessage) return;
-
-    const lcdName = action.lcd?.ref?.name ?? "lcd";
-
-    fileNode.append(`
-            ${lcdName}.setCursor(0, 0);
-            ${lcdName}.print("                ");  // clear line 0
-            ${lcdName}.setCursor(0, 1);
-            ${lcdName}.print("                ");  // clear line 1`);
-
-    for (const part of action.lcdMessage.parts) {
-        if (part.$type === "ConstantText") {
-            fileNode.append(`
-            ${lcdName}.setCursor(0, 0);
-            ${lcdName}.print("${part.value}");`);
-        }
-    }
-
-    for (const part of action.lcdMessage.parts) {
-        if (part.$type === "BrickValueRef") {
-            const brick = part.brick?.ref;
-            if (!brick) continue;
-
-            fileNode.append(`
-            ${lcdName}.setCursor(0, 1);`);
-
-            if ("inputPin" in brick) {
-                fileNode.append(`
-            ${lcdName}.print((digitalRead(${brick.inputPin}) == HIGH ? "HIGH" : "LOW "));`);
-            }
-            else if ("outputPin" in brick) {
-                fileNode.append(`
-            ${lcdName}.print((digitalRead(${brick.outputPin}) == HIGH ? "ON  " : "OFF "));`);
-            }
-        }
-    }
-}
-function recurssiveCompileTransition(transition: Transition, fileNode: CompositeGeneratorNode, parts: string[], debounces: string[]) {
-    if ((transition as any).transitions.length > 0) {
-        for (const subTransition of (transition as any).transitions) {
-            recurssiveCompileTransition(subTransition, fileNode, parts, debounces);
-        }
-    } else {
-        switch (transition.$type) {
-            case "TemporalTransition":
-                compileTemporalTransition(transition as unknown as TemporalTransition, fileNode, parts);
-                break;
-            case "SignalTransition":
-                compileSignalTransition(transition as unknown as SignalTransition, fileNode, parts, debounces);
-                break;
-            case "MessageTransition":
-                compileMessageTransition(transition as unknown as MessageTransition, fileNode, parts);
-                break;
-        }
-    }
-}
-
-function compileTransition(
-    transition: Transition,
-    fileNode: CompositeGeneratorNode
-) {
-    const parts: string[] = [];
-    const debounces: string[] = [];
-    recurssiveCompileTransition(transition, fileNode, parts, debounces);
-
-    const op = (transition as any).connector?.value === 'AND' ? '&&' : '||';
-    if (parts.length === 0) {
-        parts.push('true');
-    }
-    const condition = parts.length > 1 ? `(` + parts.join(` ` + op + ` `) + `)` : parts[0];
-    const nextName = (transition as any).next?.ref?.name ? (transition as any).next.ref.name : ((transition as any).errorCode !== undefined ? 'error_' + (transition as any).errorCode : undefined);
-
-    const debounceCode = debounces.length > 0 ? `\n\t\t\t\t` + debounces.join(`\n\t\t\t\t`) : '';
-    const hasSerial = hasSerialCommunication(transition.$container.$container as App);
-
-    const notPrintCode = hasSerial ? `
-                notPrint = true;` : '';
-
-    fileNode.append(`
-            if (` + condition + `) {` + debounceCode + `
-                currentState = ` + nextName + `;` +
-        notPrintCode + `
-            }`);
-}
-
-function compileTemporalTransition(transition: TemporalTransition, fileNode: any, parts: string[]) {
-    const delay = transition.delay;
-    parts.push(`(millis() - stateEnteredTime > ${delay})`);
-    return;
-}
-
-function compileSignalTransition(transition: SignalTransition, fileNode: any, parts: string[], debounces: string[]) {
-    const sensorName = transition.sensor?.ref?.name;
-    fileNode.append(
-        NL,
-        "\t\t\t" + sensorName + `BounceGuard = millis() - ` +
-        sensorName + `LastDebounceTime > debounce;`
-    );
-    debounces.push(sensorName + `LastDebounceTime = millis();`);
-    const pin = transition.sensor?.ref?.inputPin;
-    const name = transition.sensor?.ref?.name;
-    const val = transition.value?.value;
-    parts.push(`(digitalRead(${pin}) == ${val} && ${name}BounceGuard)`);
-    return
-}
-
-function compileMessageTransition(transition: MessageTransition, fileNode: any, parts: string[]) {
-    if (transition.any) {
-        parts.push(`(serialInput.length() > 0)`);
-    } else if (transition.pattern) {
-        let pattern = transition.pattern;
-        if ((pattern.startsWith('"') && pattern.endsWith('"')) ||
-            (pattern.startsWith("'") && pattern.endsWith("'"))) {
-            pattern = pattern.substring(1, pattern.length - 1);
-        }
-        parts.push(`(serialInput == "` + pattern + `")`)
-    }
-}
-
-function compileErrorLedActuatorCode(app: App, fileNode: CompositeGeneratorNode) {
-    if (isUsingErrorState(app)) {
-        fileNode.append(`
-    pinMode(12, OUTPUT); // Onboard LED for error blinking`, NL);
-    }
-}
-
-function isUsingErrorState(app: App): boolean {
-    return app.states.some(s => s.transition && (s.transition as any).errorCode !== undefined);
-}
-
-function getErrorCodes(app: App): number[] {
-    return app.states.map(s => s.transition).filter(t => t && (t as any).errorCode !== undefined).map(t => (t as any).errorCode);
-}
-
-function generateErrorMethodCode(fileNode: CompositeGeneratorNode) {
-    fileNode.append(`
-
-long blinkDuration = 200;
-long pauseDuration = 900;
-long currentBlinkNumber = 0;
-boolean currentBlinkState = false;
-boolean pauseBlink = false;
-long currentBlinkDuration = 0;
-
-void errorBlink(long errorCode) {
-    if (pauseBlink) {
-        if (millis() - currentBlinkDuration > pauseDuration) {
-            pauseBlink = false;
-        }
-        return;
-    }
-    if (millis() - currentBlinkDuration > blinkDuration) {
-        currentBlinkDuration = millis();
-        if (currentBlinkState) {
-            digitalWrite(12, LOW);
-            currentBlinkNumber++;
-            if (currentBlinkNumber == errorCode) {
-                currentBlinkNumber = 0;
-                pauseBlink = true;
-                currentBlinkDuration = millis();
-            }
-        } else {
-            digitalWrite(12, HIGH);
-        }
-        currentBlinkState = !currentBlinkState;
-    }
-}
-`, NL);
+function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
+  // For now, generate a basic slide with elements content
+  fileNode.append(`
+            <section>
+                <h2>Slide</h2>
+                <p>Content will be rendered here</p>
+            </section>`);
 }

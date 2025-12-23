@@ -125,9 +125,12 @@ ZPosition:
 CoordinatePosition:
   value=NUMBER;
 
-terminal EnumXPosition: 'left' | 'center' | 'right';
-terminal EnumYPosition: 'top' | 'center' | 'bottom';
-terminal EnumZPosition: 'front' | 'behind';
+EnumXPosition returns string:
+  'left' | 'center' | 'right';
+EnumYPosition returns string:
+  'top' | 'center' | 'bottom';
+EnumZPosition returns string:
+  'front' | 'behind';
 
 
 Animation:
@@ -144,8 +147,10 @@ Transition:
 terminal TransitionType: 'slide-left' | 'slide-top';
 
 
-terminal TextAlignment: 'left' | 'center' | 'right' | 'justify';
-terminal TextType: 'title' | 'subtitle' | 'text';
+TextAlignment returns string:
+  'left' | 'center' | 'right' | 'justify';
+TextType returns string:
+  'title' | 'subtitle' | 'text';
 
 
 terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
@@ -153,3 +158,9 @@ terminal BOOLEAN: /true|false/;
 terminal NUMBER: /-?\d+(\.\d+)?/;
 terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;
 terminal STRING: /"([^"\\]*(\\.[^"\\]*)*)"/;
+
+
+
+hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
+hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
+hidden terminal WS: /[ \t\r\n\uFEFF\u00A0]+/;
