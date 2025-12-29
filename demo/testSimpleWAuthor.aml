@@ -3,12 +3,14 @@
   author: "Emma"
   slides: 
     -slide: 
-      title: 
-        content: "Hello" 
-        align: center 
+      elements: 
+        title: 
+          content: "Hello" 
+          align: center 
 
     -slide:
-      text: 
-        content: "testrefacto"
-        align: center
+      elements:
+        text: 
+          content: "testrefacto"
+          align: center
 

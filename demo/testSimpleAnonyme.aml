@@ -1,2 +1,0 @@
-presentation "Test" {  slide { text { "Hello" align center } } } 
-
