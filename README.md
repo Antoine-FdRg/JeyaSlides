@@ -28,9 +28,9 @@ Elle doit être relancée à chaque modification de la grammaire du DSL.
 
 
 
-### Génération de slides à partir d'un fichier .aml
+### Génération de slides à partir d'un fichier .sml
 
-Un script est fourni pour automatiser la génération d’un fichier HTML à partir d’un fichier .aml et lancer
+Un script est fourni pour automatiser la génération d’un fichier HTML à partir d’un fichier .sml et lancer
 directement le serveur Reveal.js (compatible avec Linux, macOS & Git Bash).
 
 Depuis le dossier scripts, exéctuer la commande suivante :
@@ -38,14 +38,14 @@ Depuis le dossier scripts, exéctuer la commande suivante :
 `./run-demo.sh <file_name>` 
 
 Ce script :
-- génère le fichier HTML à partir du fichier .aml
+- génère le fichier HTML à partir du fichier .sml
 - démarre le serveur Reveal.js
 - affiche la présentation correspondante
 
 Pour faire la même chose manuellement, il faut suivre les étapes suivantes : 
 - Convertir le fichier
     1. `cd .\demo`
-    2. `node ..\bin\cli generate .\<file_name>.aml`
+    2. `node ..\bin\cli generate .\<file_name>.sml`
 - Afficher la présentation générée
     1. `cd .\demo\presentationexecutor`
     2. `npm install` (à faire la première fois seulement)

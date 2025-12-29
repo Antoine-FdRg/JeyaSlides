@@ -13,7 +13,7 @@
         "languages": [{
             "id": "slide-ml",
             "aliases": ["JeyaSlides", "slide-ml"],
-            "extensions": [".aml"],
+            "extensions": [".sml"],
             "configuration": "./language-configuration.json"
         }],
         "grammars": [{

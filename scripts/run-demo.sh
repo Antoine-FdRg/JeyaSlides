@@ -2,16 +2,16 @@
 set -e
 
 if [ -z "$1" ]; then
-  echo "❌ Usage: ./run-demo.sh <file_name>.aml"
+  echo "❌ Usage: ./run-demo.sh <file_name>.sml"
   exit 1
 fi
 
 FILE_NAME=$1
-BASE_NAME=$(basename "$FILE_NAME" .aml)
+BASE_NAME=$(basename "$FILE_NAME" .sml)
 
 echo "📄 Generating HTML from $FILE_NAME..."
 cd ../demo
-node ../bin/cli generate ./$FILE_NAME.aml
+node ../bin/cli generate ./$FILE_NAME.sml
 
 echo "🚀 Starting Reveal.js server..."
 cd presentationexecutor
