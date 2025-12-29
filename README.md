@@ -23,11 +23,6 @@ Cette commande regroupe :
 
 Elle doit être relancée à chaque modification de la grammaire du DSL.
 
-
-### Pour afficher une présentation générée
-
-
-
 ### Génération de slides à partir d'un fichier .sml
 
 Un script est fourni pour automatiser la génération d’un fichier HTML à partir d’un fichier .sml et lancer
