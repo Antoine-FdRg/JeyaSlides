@@ -4,13 +4,13 @@ presentation:
   slides: 
     -slide: 
       elements: 
-        title: 
+        -title: 
           content: "Hello" 
           align: center 
 
     -slide:
       elements:
-        text: 
+        -text: 
           content: "Okay"
           align: center
 
