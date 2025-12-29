@@ -40,7 +40,9 @@
         "watch": "tsc -b tsconfig.json --watch",
         "lint": "eslint src --ext ts",
         "langium:generate": "langium generate",
-        "langium:watch": "langium generate --watch"
+        "langium:watch": "langium generate --watch",
+        "langium:full-build": "npm run langium:generate && npm run build"
+
     },
     "dependencies": {
         "chevrotain": "^10.4.1",

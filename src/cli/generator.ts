@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { CompositeGeneratorNode, toString } from 'langium';
 import path from 'path';
-import { Model, Presentation, Slide } from '../language-server/generated/ast';
+import { Element, Model, Presentation, Slide, Group, isGroup, Text, isText, isCode, Paragraph, isParagraph, isList } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
@@ -39,7 +39,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode) {
         <div class="slides">`);
 
   // Generate slides for each presentation
-  const presentations = (model as any).presentations ?? [];
+  const presentations = model.presentations ?? [];
   for (const presentation of presentations) {
     generatePresentationSlides(presentation, fileNode);
   }
@@ -90,10 +90,69 @@ function generatePresentationSlides(presentation: Presentation, fileNode: Compos
 }
 
 function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
-  // For now, generate a basic slide with elements content
-  fileNode.append(`
-            <section>
-                <h2>Slide</h2>
-                <p>Content will be rendered here</p>
-            </section>`);
+  fileNode.append('<section>');
+  for (const element of slide.elements) {
+    generateElement(element, fileNode);
+  }
+  fileNode.append('</section>');
+}
+
+function generateGroup(group: Group, fileNode: CompositeGeneratorNode) {
+  fileNode.append('<div class="group">');
+  // applyStyle(group.style); TODO
+  // applyPosition(group.position); TODO
+  // applyAnimation(group.animation); TODO
+
+  for (const child of group.elements) {
+    generateElement(child, fileNode);
+  }
+
+  fileNode.append('</div>');
+}
+
+function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
+  if (isGroup(element)) return generateGroup(element, fileNode);
+  if (isText(element)) return generateText(element, fileNode);
+  // if (isImage(element)) return generateImage(element, fileNode); TODO
+  // if (isVideo(element)) return generateVideo(element, fileNode); TODO
+  // if (isQuiz(element)) return generateQuiz(element, fileNode); TODO
+  throw new Error(`Unhandled element type: ${element.$type}`);
+}
+
+function generateText(text: Text, fileNode: CompositeGeneratorNode) {
+  fileNode.append('<div class="text">');
+
+  if (isCode(text)) {
+    // generateCode(text, fileNode); TODO
+  } else if (isParagraph(text)) {
+    generateParagraph(text, fileNode);
+  } else if (isList(text)) {
+    // generateList(text, fileNode); TODO
+  } else {
+    throw new Error(`Unsupported Text type: ${text.$type}`);
+  }
+
+  fileNode.append('</div>')
+}
+
+function generateParagraph(
+  paragraph: Paragraph,
+  fileNode: CompositeGeneratorNode
+) {
+  switch (paragraph.type) {
+    case 'title':
+      fileNode.append(`<h1>${paragraph.content}</h1>`);
+      break;
+
+    case 'subtitle':
+      fileNode.append(`<h2>${paragraph.content}</h2>`);
+      break;
+
+    case 'text':
+      fileNode.append(`<p>${paragraph.content}</p>`);
+      break;
+
+    default:
+      throw new Error(`Unknown paragraph type: ${paragraph.type}`);
+  }
 }

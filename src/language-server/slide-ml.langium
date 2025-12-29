@@ -44,20 +44,24 @@ Slide:
       elements+=Element+
 ;
 
-Element infers Element:
-  (Text | Image | Video | Quiz | Group) 
+Element:
+  Text | Image | Video | Quiz | Group;
+
+Group:
+  'group:'
     (style=Style)?
     (position=Position)?
     (animation=Animation)?
+    'elements:'
+      elements+=Element+
 ;
 
-Group infers Element:
-  'group:'
-    elements+=Element
-    (elements+=Element)*;
-
 Text:
-  Code | BasicText;
+  (Code | BasicText)
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
 
 Code:
   'code:' 
@@ -71,7 +75,7 @@ Paragraph:
   type=TextType  ':' 
     'content:'content=STRING;
 
-List:
+  List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
     'items:' 
@@ -79,14 +83,28 @@ List:
       ('-' items+=STRING)*;
 
 Image:
-  'image:' 
-    'link:' link=STRING;
+  'image:'
+    'link:' link=STRING
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
+
 Video:
-  'video:' 
-    'link:' link=STRING;
+  'video:'
+    'link:' link=STRING
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
+
 Quiz:
-  'quiz:' 
-    'link:' link=STRING;
+  'quiz:'
+    'link:' link=STRING
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
 
 Style:
   'style:'
