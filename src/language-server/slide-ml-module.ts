@@ -2,7 +2,7 @@ import {
     createDefaultModule, createDefaultSharedModule, DefaultSharedModuleContext, inject,
     LangiumServices, LangiumSharedServices, Module, PartialLangiumServices
 } from 'langium';
-import { SlideMLGeneratedModule, SlideMLGeneratedSharedModule } from './generated/module';
+import { SlideMLGeneratedModule, JeyaSlidesGeneratedSharedModule } from './generated/module';
 import { SlideMLValidator, registerValidationChecks } from './slide-ml-validator';
 
 /**
@@ -52,7 +52,7 @@ export function createSlideMlServices(context: DefaultSharedModuleContext): {
 } {
     const shared = inject(
         createDefaultSharedModule(context),
-        SlideMLGeneratedSharedModule
+        JeyaSlidesGeneratedSharedModule
     );
     const SlideML = inject(
         createDefaultModule({ shared }),

@@ -1,82 +1,126 @@
-import { ValidationAcceptor, ValidationChecks } from 'langium';
 import {
-    SlideMLAstType,
-    App,
-    LCDMessage,
-    ConstantText,
-    BrickValueRef,
-} from './generated/ast';
+  AstNode,
+  AstTypeList,
+  ValidationAcceptor,
+  ValidationChecks,
+} from 'langium';
+import { JeyaSlidesAstType } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
-/**
- * Register custom validation checks.
- */
 export function registerValidationChecks(services: SlideMLServices) {
-    const registry = services.validation.ValidationRegistry;
-    const validator = services.validation.SlideMLValidator;
-    const checks: ValidationChecks<SlideMLAstType> = {
-        App: validator.checkNothing,
-        LCDMessage: validator.checkLCDMessage
-    };
-    registry.register(checks, validator);
+  const registry = services.validation.ValidationRegistry;
+  const validator = services.validation.SlideMLValidator;
+
+  const checks: ValidationChecks<AstTypeList<JeyaSlidesAstType>> = {
+    Template: validator.checkPropertyFormatting,
+    Presentation: validator.checkPropertyFormatting,
+    Slide: validator.checkPropertyFormatting,
+    Element: validator.checkPropertyFormatting,
+  };
+
+  registry.register(checks, validator);
 }
 
-/**
- * Implementation of custom validations.
- */
 export class SlideMLValidator {
+  checkPropertyFormatting(node: AstNode, accept: ValidationAcceptor): void {
+    const $cstNode = node.$cstNode;
+    if (!$cstNode) return;
 
-    checkNothing(app: App, accept: ValidationAcceptor): void {
-        if (app.name) {
-            const firstChar = app.name.substring(0, 1);
-            if (firstChar.toUpperCase() !== firstChar) {
-                accept('warning', 'App name should start with a capital.', { node: app, property: 'name' });
-            }
-        }
+    const text = $cstNode.text;
+    const lines = text.split(/\r?\n/);
+
+    // Vérifier si plusieurs propriétés sont sur la même ligne
+    this.checkOneLinePerProperty(lines, accept, node);
+
+    // Vérifier si plusieurs éléments de liste ("-") sont sur la même ligne
+    this.checkListItemFormatting(node, lines, accept);
+
+    // Vérifier l'indentation cohérente (optionnel, pour un style plus strict)
+    this.checkIndentation(node, lines, accept);
+  }
+
+  private checkOneLinePerProperty(
+    lines: string[],
+    accept: ValidationAcceptor,
+    node: AstNode,
+  ) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || line.startsWith('//') || line.startsWith('/*')) continue;
+
+      // Compter le nombre de ':' qui indiquent des propriétés (en excluant les ':' dans les strings)
+      const colonMatches = line.match(/:\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/g);
+
+      if (colonMatches && colonMatches.length > 1) {
+        accept(
+          'warning',
+          'Il est recommandé de placer chaque propriété sur une ligne séparée pour améliorer la lisibilité (style YAML).',
+          { node, property: undefined },
+        );
+        break;
+      }
+    }
+  }
+
+  private checkListItemFormatting(
+    node: AstNode,
+    lines: string[],
+    accept: ValidationAcceptor,
+  ): void {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (
+        !line.trim() ||
+        line.trim().startsWith('//') ||
+        line.trim().startsWith('/*')
+      )
+        continue;
+
+      // Compter le nombre d'éléments de liste (tirets "-") sur une ligne
+      // On cherche les tirets qui ne sont pas dans des strings
+      const dashMatches = line.match(/-\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/g);
+
+      if (dashMatches && dashMatches.length > 1) {
+        accept(
+          'warning',
+          'Il est recommandé de placer chaque élément de liste (commençant par "-") sur une ligne séparée (style YAML).',
+          { node, property: undefined },
+        );
+        break; // Un seul avertissement par nœud suffit
+      }
+    }
+  }
+
+  private checkIndentation(
+    node: AstNode,
+    lines: string[],
+    accept: ValidationAcceptor,
+  ): void {
+    const indentations: number[] = [];
+
+    for (const line of lines) {
+      if (!line.trim() || line.trim().startsWith('//')) continue;
+
+      const match = line.match(/^(\s*)/);
+      if (match) {
+        const spaces = match[1].length;
+        indentations.push(spaces);
+      }
     }
 
-    /**
-     * Validation statique du message LCD :
-     * - ASCII imprimable uniquement
-     * - taille totale <= 32 (écran 16x2)
-     */
-    checkLCDMessage(msg: LCDMessage, accept: ValidationAcceptor): void {
-        const MAX = 32;
-        let length = 0;
+    // Vérifier si l'indentation utilise des espaces cohérents (multiples de 2 ou 4)
+    const hasInconsistentIndent = indentations.some((indent, idx) => {
+      if (idx === 0) return false;
+      const diff = Math.abs(indent - indentations[idx - 1]);
+      return diff !== 0 && diff !== 2 && diff !== 4 && diff % 2 !== 0;
+    });
 
-        for (const part of msg.parts) {
-            if (part.$type === 'ConstantText') {
-                const raw = (part as ConstantText).value;
-                const v = raw.substring(1, raw.length - 1);
-                if (!/^[\x20-\x7E]*$/.test(v)) {
-                    accept(
-                        'error',
-                        'Le texte LCD contient des caracteres non ASCII imprimables.',
-                        { node: part, property: 'value' }
-                    );
-                }
-                length += v.length;
-            }
-            if (part.$type === 'BrickValueRef') {
-                const brick = (part as BrickValueRef).brick?.ref;
-                if (!brick) continue;
-                if (brick.$type === 'Sensor') {
-                    length += 4; // HIGH ou LOW
-                }
-                else if (brick.$type === 'Actuator') {
-                    length += 3; // ON ou OFF
-                }
-                else {
-                    length += 4; // fallback
-                }
-            }
-        }
-        if (length > MAX) {
-            accept(
-                'error',
-                `Message LCD trop long (${length} caracteres, max = ${MAX}).`,
-                { node: msg }
-            );
-        }
+    if (hasInconsistentIndent) {
+      accept(
+        'hint',
+        "L'indentation pourrait être plus cohérente. Utilisez 2 ou 4 espaces de manière uniforme.",
+        { node, property: undefined },
+      );
     }
+  }
 }
