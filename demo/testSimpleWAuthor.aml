@@ -1,10 +1,14 @@
-﻿presentation "TestPresentation" {
-  author "Emma"
-  slide {
-    title { "Hello" align center } 
-  }
+﻿presentation: 
+  name: "TestPresentation" 
+  author: "Emma"
+  slides: 
+    -slide: 
+      title: 
+        content: "Hello" 
+        align: center 
 
-  slide {
-    text { "World" align left } 
-  }
-}
+    -slide:
+      text: 
+        content: "testrefacto"
+        align: center
+
