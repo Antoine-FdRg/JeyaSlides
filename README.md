@@ -21,13 +21,13 @@ Installer l'extension "Langium"
 ### Pour convertir un fichier
 
 1. `cd .\demo`
-2. `node ..\bin\cli generate .\generated\<file_name>.sml`
+2. `node ..\bin\cli generate .\generated\<file_name>.aml`
 
 ### Pour afficher une présentation
 
 1. `cd .\demo\presentationexecutor`
 2. `npm install` (à faire la première fois seulement)
-3. `npm start <file_name>.html`
+3. `npm start ./generated/<file_name>.html`
 
 ### Utiliser l'extension VSCode
 
