@@ -32,14 +32,16 @@ Presentation:
     ('author:' author=STRING)?
     ('displaySlideNumber:' displaySlideNumber=BOOLEAN)?
     ('template:' template=STRING)?
-    "slides:" slides+=Slide+
+    "slides:" 
+      slides+=Slide+
 ;
 
 Slide:
   '-slide:' 
     ('annotable:' annotable=BOOLEAN)?
     (transition=Transition)?
-    'elements:' elements+=Element
+    'elements:' 
+      elements+=Element+
 ;
 
 Element infers Element:
