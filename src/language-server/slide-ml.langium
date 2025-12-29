@@ -41,7 +41,7 @@ Slide:
     ('annotable:' annotable=BOOLEAN)?
     (transition=Transition)?
     'elements:' 
-      elements+=Element+
+      ('-'elements+=Element)+
 ;
 
 Element:
@@ -53,7 +53,7 @@ Group:
     (position=Position)?
     (animation=Animation)?
     'elements:'
-      elements+=Element+
+      ('-'elements+=Element)+
 ;
 
 Text:
