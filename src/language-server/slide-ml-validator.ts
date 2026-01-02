@@ -1,9 +1,4 @@
-import {
-  AstNode,
-  AstTypeList,
-  ValidationAcceptor,
-  ValidationChecks,
-} from 'langium';
+import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
 import { JeyaSlidesAstType } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
@@ -37,13 +32,15 @@ export class SlideMLValidator {
 
     // Vérifier l'indentation cohérente (optionnel, pour un style plus strict)
     this.checkIndentation(node, lines, accept);
+
+    // Vérifier le format des liens d'image
+    this.checkImageLinks(node, accept);
+
+    // Vérifier le format des liens de vidéo
+    this.checkVideoLinks(node, accept);
   }
 
-  private checkOneLinePerProperty(
-    lines: string[],
-    accept: ValidationAcceptor,
-    node: AstNode,
-  ) {
+  private checkOneLinePerProperty(lines: string[], accept: ValidationAcceptor, node: AstNode) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line || line.startsWith('//') || line.startsWith('/*')) continue;
@@ -62,19 +59,10 @@ export class SlideMLValidator {
     }
   }
 
-  private checkListItemFormatting(
-    node: AstNode,
-    lines: string[],
-    accept: ValidationAcceptor,
-  ): void {
+  private checkListItemFormatting(node: AstNode, lines: string[], accept: ValidationAcceptor): void {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (
-        !line.trim() ||
-        line.trim().startsWith('//') ||
-        line.trim().startsWith('/*')
-      )
-        continue;
+      if (!line.trim() || line.trim().startsWith('//') || line.trim().startsWith('/*')) continue;
 
       // Compter le nombre d'éléments de liste (tirets "-") sur une ligne
       // On cherche les tirets qui ne sont pas dans des strings
@@ -91,11 +79,7 @@ export class SlideMLValidator {
     }
   }
 
-  private checkIndentation(
-    node: AstNode,
-    lines: string[],
-    accept: ValidationAcceptor,
-  ): void {
+  private checkIndentation(node: AstNode, lines: string[], accept: ValidationAcceptor): void {
     const indentations: number[] = [];
 
     for (const line of lines) {
@@ -116,11 +100,70 @@ export class SlideMLValidator {
     });
 
     if (hasInconsistentIndent) {
-      accept(
-        'hint',
-        "L'indentation pourrait être plus cohérente. Utilisez 2 ou 4 espaces de manière uniforme.",
-        { node, property: undefined },
-      );
+      accept('hint', "L'indentation pourrait être plus cohérente. Utilisez 2 ou 4 espaces de manière uniforme.", {
+        node,
+        property: undefined,
+      });
     }
+  }
+
+  private checkImageLinks(node: AstNode, accept: ValidationAcceptor): void {
+    const imageLinks = this.extractImageLinks(node);
+    imageLinks.forEach((link) => {
+      if (!this.isValidImageLink(link)) {
+        accept('warning', 'Le lien de l’image semble étrange, veuillez vérifier : ' + link, { node });
+      }
+    });
+  }
+
+  private extractImageLinks(node: AstNode): string[] {
+    const links: string[] = [];
+    // Logique pour extraire les liens d'images du nœud
+    // Cela dépend de la structure de votre AST
+    // Exemple d'extraction :
+    if (node.$cstNode) {
+      const text = node.$cstNode.text;
+      const regex = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        links.push(match[0]);
+      }
+    }
+    return links;
+  }
+
+  private isValidImageLink(link: string): boolean {
+    // Logique pour vérifier si le lien est valide
+    return link.startsWith('http') || link.startsWith('https');
+  }
+
+  private checkVideoLinks(node: AstNode, accept: ValidationAcceptor): void {
+    const videoLinks = this.extractVideoLinks(node);
+    videoLinks.forEach((link) => {
+      if (!this.isValidVideoLink(link)) {
+        accept('warning', 'Le lien de la vidéo semble étrange, veuillez vérifier : ' + link, { node });
+      }
+    });
+  }
+
+  private extractVideoLinks(node: AstNode): string[] {
+    const links: string[] = [];
+    // Logique pour extraire les liens de vidéos du nœud
+    // Cela dépend de la structure de votre AST
+    // Exemple d'extraction :
+    if (node.$cstNode) {
+      const text = node.$cstNode.text;
+      const regex = /https?:\/\/[^\s]+\.(mp4|avi|mov|wmv)/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        links.push(match[0]);
+      }
+    }
+    return links;
+  }
+
+  private isValidVideoLink(link: string): boolean {
+    // Logique pour vérifier si le lien est valide
+    return link.startsWith('http') || link.startsWith('https');
   }
 }
