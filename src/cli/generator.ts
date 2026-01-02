@@ -1,8 +1,24 @@
 import fs from 'fs';
 import { CompositeGeneratorNode, toString } from 'langium';
 import path from 'path';
-import { Element, Model, Presentation, Slide, Group, isGroup, Text, isText, isCode, Paragraph, isParagraph, isList } from '../language-server/generated/ast';
+import {
+  Element,
+  Model,
+  Presentation,
+  Slide,
+  Group,
+  isGroup,
+  Text,
+  isText,
+  isCode,
+  Paragraph,
+  isParagraph,
+  isList,
+} from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
+
+const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
+const DEFAULT_TEXT_STYLE = 'margin: 0;';
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
   const data = extractDestinationAndName(filePath, destination);
@@ -97,9 +113,12 @@ function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
   fileNode.append('</section>');
 }
 
-function generateGroup(group: Group, fileNode: CompositeGeneratorNode) {
-  fileNode.append('<div class="group">');
-  // applyStyle(group.style); TODO
+function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[]) {
+  fileNode.append('<div class="group"');
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+  fileNode.append('>');
   // applyPosition(group.position); TODO
   // applyAnimation(group.animation); TODO
 
@@ -111,16 +130,77 @@ function generateGroup(group: Group, fileNode: CompositeGeneratorNode) {
 }
 
 function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
-  if (isGroup(element)) return generateGroup(element, fileNode);
-  if (isText(element)) return generateText(element, fileNode);
-  // if (isImage(element)) return generateImage(element, fileNode); TODO
-  // if (isVideo(element)) return generateVideo(element, fileNode); TODO
-  // if (isQuiz(element)) return generateQuiz(element, fileNode); TODO
+  const styles: String[] = getElementStyles(element);
+  if (isGroup(element)) return generateGroup(element, fileNode, styles);
+  if (isText(element)) return generateText(element, fileNode, styles);
+  // if (isImage(element)) return generateImage(element, fileNode, styles); TODO
+  // if (isVideo(element)) return generateVideo(element, fileNode, styles); TODO
+  // if (isQuiz(element)) return generateQuiz(element, fileNode, styles); TODO
   throw new Error(`Unhandled element type: ${element.$type}`);
 }
 
-function generateText(text: Text, fileNode: CompositeGeneratorNode) {
-  fileNode.append('<div class="text">');
+function getElementStyles(element: Element): String[] {
+  const styles: String[] = [...DEFAULT_ELEMENT_STYLES];
+  if (!element.style) return styles;
+  if (element.style.backgroundColor) {
+    styles.push(`background-color: ${element.style.backgroundColor};`);
+  }
+  if (element.style.rotation) {
+    styles.push(`transform: rotate(${element.style.rotation}deg);`);
+  }
+  styles.push(...(getSizeStyles(element) || []));
+  styles.push(...(getFontStyles(element) || []));
+  return styles;
+
+  function getSizeStyles(element: Element): String[] | undefined {
+    let sizeStyles: String[] = [];
+    if (!element.style?.size) return;
+    if (element.style.size.width) {
+      sizeStyles.push(`width: ${element.style.size.width}%;`);
+    }
+    if (element.style.size.height) {
+      sizeStyles.push(`height: ${element.style.size.height}%;`);
+    }
+    return sizeStyles;
+  }
+
+  function getFontStyles(element: Element): String[] | undefined {
+    let fontStyles: String[] = [];
+    if (!element.style?.font) return;
+    if (element.style.font.name) {
+      fontStyles.push(`font-family: ${element.style.font.name};`);
+    }
+    if (element.style.font.size) {
+      fontStyles.push(`font-size: ${element.style.font.size}px;`);
+    }
+    if (element.style.font.color) {
+      fontStyles.push(`color: ${element.style.font.color};`);
+    }
+    if (element.style.font.transformations) {
+      for (const transformation of element.style.font.transformations) {
+        switch (transformation) {
+          case 'bold':
+            fontStyles.push('font-weight: bold;');
+            break;
+          case 'italic':
+            fontStyles.push('font-style: italic;');
+            break;
+          case 'underline':
+            fontStyles.push('text-decoration: underline;');
+            break;
+        }
+      }
+    }
+    return fontStyles;
+  }
+}
+
+function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[]) {
+  fileNode.append('<div class="text"');
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+  fileNode.append('>');
 
   if (isCode(text)) {
     // generateCode(text, fileNode); TODO
@@ -132,24 +212,21 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode) {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
-  fileNode.append('</div>')
+  fileNode.append('</div>');
 }
 
-function generateParagraph(
-  paragraph: Paragraph,
-  fileNode: CompositeGeneratorNode
-) {
+function generateParagraph(paragraph: Paragraph, fileNode: CompositeGeneratorNode) {
   switch (paragraph.type) {
     case 'title':
-      fileNode.append(`<h1>${paragraph.content}</h1>`);
+      fileNode.append(`<h1 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h1>`);
       break;
 
     case 'subtitle':
-      fileNode.append(`<h2>${paragraph.content}</h2>`);
+      fileNode.append(`<h2 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h2>`);
       break;
 
     case 'text':
-      fileNode.append(`<p>${paragraph.content}</p>`);
+      fileNode.append(`<p style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</p>`);
       break;
 
     default:
