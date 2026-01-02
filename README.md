@@ -10,24 +10,42 @@ manière simple et efficace.
 
 ## Utilisation
 
-Installer l'extension "Langium"
+1. Installer les dépendances du projet :
+`npm i`
 
-1. `npm i`
+2. Générer les fichiers Langium (AST, services, etc.) et compiler le projet TypeScript : `npm run langium:full-build`
 
-2. `npm run langium:generate`
+Cette commande regroupe :
 
-3. `npm run build`
+- La génération des fichiers Langium à partir de la grammaire (`npm run langium:generate`)
 
-### Pour convertir un fichier
+- La compilation du projet TypeScript (`npm run build`)
 
-1. `cd .\demo`
-2. `node ..\bin\cli generate .\generated\<file_name>.aml`
+Elle doit être relancée à chaque modification de la grammaire du DSL.
 
-### Pour afficher une présentation
+### Génération de slides à partir d'un fichier .sml
 
-1. `cd .\demo\presentationexecutor`
-2. `npm install` (à faire la première fois seulement)
-3. `npm start ./generated/<file_name>.html`
+Un script est fourni pour automatiser la génération d’un fichier HTML à partir d’un fichier .sml et lancer
+directement le serveur Reveal.js (compatible avec Linux, macOS & Git Bash).
+
+Depuis le dossier scripts, exéctuer la commande suivante :
+
+`./run-demo.sh <file_name>` 
+
+Ce script :
+- génère le fichier HTML à partir du fichier .sml
+- démarre le serveur Reveal.js
+- affiche la présentation correspondante
+
+Pour faire la même chose manuellement, il faut suivre les étapes suivantes : 
+- Convertir le fichier
+    1. `cd .\demo`
+    2. `node ..\bin\cli generate .\<file_name>.sml`
+- Afficher la présentation générée
+    1. `cd .\demo\presentationexecutor`
+    2. `npm install` (à faire la première fois seulement)
+    3. `npm start ./generated/<file_name>.html`
+
 
 ### Utiliser l'extension VSCode
 

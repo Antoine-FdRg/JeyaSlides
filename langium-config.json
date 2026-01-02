@@ -3,7 +3,7 @@
     "languages": [{
         "id": "slide-ml",
         "grammar": "src/language-server/slide-ml.langium",
-        "fileExtensions": [".aml"],
+        "fileExtensions": [".sml"],
         "textMate": {
             "out": "syntaxes/slide-ml.tmLanguage.json"
         }

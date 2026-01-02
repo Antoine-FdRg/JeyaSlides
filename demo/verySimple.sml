@@ -1,16 +1,16 @@
-﻿presentation: 
-  name: "TestPresentation" 
-  author: "Emma"
+presentation: 
+  name: "Hello guys!" 
+  author: "Bob"
   slides: 
     -slide: 
       elements: 
-        title: 
+        -title: 
           content: "Hello" 
           align: center 
 
     -slide:
       elements:
-        text: 
-          content: "testrefacto"
+        -text: 
+          content: "Okay"
           align: center
 
