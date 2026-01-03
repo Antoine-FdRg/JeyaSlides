@@ -43,14 +43,13 @@ presentation:
           style:
             size:
               width: 80
-              height: 80
             backgroundColor: #aaa
     -slide:
       elements:
         -group:
           style:
             size:
-              width: 80
+              width: 100
           backgroundColor: #ccc
           elements:
             -text: 

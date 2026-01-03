@@ -70,12 +70,11 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode) {
             hash: true,
             center: true,
             transition: 'slide',
-            width: 960,
-            height: 700,
-            margin: 0.1,
             minScale: 0.2,
-            maxScale: 2.0
+            maxScale: 2.0,
+            disableLayout: true,
         });
+
     <\/script>
 </body>
 </html>`);
@@ -106,7 +105,7 @@ function generatePresentationSlides(presentation: Presentation, fileNode: Compos
 }
 
 function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
-  fileNode.append('<section>');
+  fileNode.append('<section style="width: 100%; height: 100%;">');
   for (const element of slide.elements) {
     generateElement(element, fileNode);
   }
