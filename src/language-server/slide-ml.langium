@@ -163,24 +163,22 @@ EnumZPosition returns string:
   'front' | 'back';
 
 
+terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
+
 Animation:
   "animation:"  
     'order:' order=NUMBER? 
     ComplexAnimation?;
 
 ComplexAnimation:
-  'type:' animationType=AnimationType 
-      ('duration:' duration=NUMBER)?;
+  'type:' animationType=EffectToken
+  ('duration:' duration=NUMBER)?;
 
-terminal AnimationType: 'fade-in' | 'zoom-in';
 
 Transition:
   'transition:' 
-    'type:' type=TransitionType 
+    'type:' type=EffectToken (second=EffectToken)?
     ('duration:' duration=NUMBER)?;
-
-terminal TransitionType: 'slide-left' | 'slide-top';
-
 
 TextAlignment returns string:
   'left' | 'center' | 'right' | 'justify';
