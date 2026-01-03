@@ -167,8 +167,8 @@ function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
   const styles: String[] = getElementStyles(element);
   if (isGroup(element)) return generateGroup(element, fileNode, styles);
   if (isText(element)) return generateText(element, fileNode, styles);
-  if (isImage(element)) return generateImage(element, fileNode, styles); TODO
-  if (isVideo(element)) return generateVideo(element, fileNode, styles); TODO
+  if (isImage(element)) return generateImage(element, fileNode, styles);
+  if (isVideo(element)) return generateVideo(element, fileNode, styles);
   // if (isQuiz(element)) return generateQuiz(element, fileNode, styles); TODO
   throw new Error(`Unhandled element type: ${element.$type}`);
 }
@@ -229,6 +229,110 @@ function getElementStyles(element: Element): String[] {
   }
 }
 
+function sanitizeLink(link: string) {
+  if (!link) return link;
+  if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
+  if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
+  return link;
+}
+
+function isRemoteLink(link: string) {
+  return /^https?:\/\//i.test(link) || link.startsWith('data:');
+}
+
+function copyLocalAssetIfNeeded(link: string): string {
+  const clean = sanitizeLink(link);
+  if (isRemoteLink(clean)) return clean;
+
+  const normalized = clean.replaceAll('\\', '/');
+  const stripped = normalized.replace(/^\/+/, '');
+
+  let candidate =
+    path.isAbsolute(normalized) && fs.existsSync(normalized) ? normalized : path.resolve(CURRENT_SOURCE_DIR, stripped);
+  if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+    if (!fs.existsSync(CURRENT_OUTPUT_DIR)) fs.mkdirSync(CURRENT_OUTPUT_DIR, { recursive: true });
+    const destName = path.basename(candidate);
+    const destPath = path.join(CURRENT_OUTPUT_DIR, destName);
+    try {
+      fs.copyFileSync(candidate, destPath);
+      return destName;
+    } catch (e) {
+      console.error(`JeyaSlides generator: failed to copy asset '${candidate}' to '${destPath}': ${e}`);
+      return clean;
+    }
+  }
+
+  return clean;
+}
+
+function getYouTubeEmbed(link: string): string | null {
+  if (!link) return null;
+  const clean = sanitizeLink(link);
+  const watchMatch = clean.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch?.[1]) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  const shortMatch = clean.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch?.[1]) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  const embedMatch = clean.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+  if (embedMatch?.[1]) return `https://www.youtube.com/embed/${embedMatch[1]}`;
+  return null;
+}
+
+function getMimeTypeFromFilename(filename: string): string {
+  if (!filename) return 'video/mp4';
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  switch (ext) {
+    case 'mp4':
+      return 'video/mp4';
+    case 'webm':
+      return 'video/webm';
+    case 'ogg':
+      return 'video/ogg';
+    case 'mpg':
+    case 'mpeg':
+      return 'video/mpeg';
+    case 'wmv':
+      return 'video/x-ms-wmv';
+    default:
+      return 'video/mp4';
+  }
+}
+
+function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: String[]) {
+  const srcRaw = copyLocalAssetIfNeeded(image.link);
+  const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
+  fileNode.append(`<div class="image"><img src="${src}" alt="image" `);
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+  fileNode.append(` onclick="openImageFullscreen(this)" onerror="this.style.display='none'"/></div>`);
+}
+
+function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: String[]) {
+  const raw = sanitizeLink(video.link);
+  const ytEmbed = getYouTubeEmbed(raw);
+  if (ytEmbed) {
+    fileNode.append(`<div class="video"><iframe `);
+    if (styles.length > 0) {
+      fileNode.append(`style="${styles.join(' ')}"`); //TODO: adapt size according to styles width="960" height="540"
+    }
+    fileNode.append(
+      `src="${ytEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`,
+    );
+    return;
+  }
+
+  const src = copyLocalAssetIfNeeded(raw);
+  const videoSrc = isRemoteLink(src) ? encodeURI(src) : src.replaceAll('\\', '/');
+  const mime = getMimeTypeFromFilename(videoSrc);
+  fileNode.append(`<div class="video"><video controls `);
+  if (styles.length > 0) {
+    fileNode.append(`style="${styles.join(' ')}"`);
+  }
+  fileNode.append(
+    `><source src="${videoSrc}" type="${mime}">Your browser does not support the video tag.</source></video></div>`,
+  );
+}
+
 function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[]) {
   fileNode.append('<div class="text"');
   if (styles.length > 0) {
@@ -236,145 +340,34 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
   }
   fileNode.append('>');
 
-  function sanitizeLink(link: string) {
-    if (!link) return link;
-    if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
-    if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
-    return link;
+  if (isCode(text)) {
+    // generateCode(text, fileNode); TODO
+  } else if (isParagraph(text)) {
+    generateParagraph(text, fileNode);
+  } else if (isList(text)) {
+    // generateList(text, fileNode); TODO
+  } else {
+    throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
-  function isRemoteLink(link: string) {
-    return /^https?:\/\//i.test(link) || link.startsWith('data:');
-  }
+  fileNode.append('</div>');
+}
 
-  function copyLocalAssetIfNeeded(link: string): string {
-    const clean = sanitizeLink(link);
-    if (isRemoteLink(clean)) return clean;
+function generateParagraph(paragraph: Paragraph, fileNode: CompositeGeneratorNode) {
+  switch (paragraph.type) {
+    case 'title':
+      fileNode.append(`<h1 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h1>`);
+      break;
 
-    const normalized = clean.replaceAll('\\', '/');
-    const stripped = normalized.replace(/^\/+/, '');
+    case 'subtitle':
+      fileNode.append(`<h2 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h2>`);
+      break;
 
-    let candidate =
-      path.isAbsolute(normalized) && fs.existsSync(normalized) ? normalized : path.resolve(CURRENT_SOURCE_DIR, stripped);
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-      if (!fs.existsSync(CURRENT_OUTPUT_DIR)) fs.mkdirSync(CURRENT_OUTPUT_DIR, { recursive: true });
-      const destName = path.basename(candidate);
-      const destPath = path.join(CURRENT_OUTPUT_DIR, destName);
-      try {
-        fs.copyFileSync(candidate, destPath);
-        return destName;
-      } catch (e) {
-        console.error(`JeyaSlides generator: failed to copy asset '${candidate}' to '${destPath}': ${e}`);
-        return clean;
-      }
-    }
+    case 'text':
+      fileNode.append(`<p style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</p>`);
+      break;
 
-    return clean;
-  }
-
-  function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: String[]) {
-    const srcRaw = copyLocalAssetIfNeeded(image.link);
-    const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
-    styles.push('max-width:100%;', 'height:auto;'); //TODO: remove when antoine merge his PR about styles
-    fileNode.append(`<div class="image"><img src="${src}" alt="image" `);
-    if (styles.length > 0) {
-      fileNode.append(` style="${styles.join(' ')}"`);
-    }
-    fileNode.append(` onclick="openImageFullscreen(this)" onerror="this.style.display='none'"/></div>`);
-  }
-
-  function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: String[]) {
-    const raw = sanitizeLink(video.link);
-    const ytEmbed = getYouTubeEmbed(raw);
-    styles.push('max-width:100%;', 'height:auto;'); //TODO: remove when antoine merge his PR about styles
-    if (ytEmbed) {
-      fileNode.append(`<div class="video"><iframe `);
-      if (styles.length > 0) {
-        fileNode.append(`width="960" height="540"`); //TODO: adapt size according to styles
-      }
-      fileNode.append(
-        `src="${ytEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`,
-      );
-      return;
-    }
-
-    const src = copyLocalAssetIfNeeded(raw);
-    const videoSrc = isRemoteLink(src) ? encodeURI(src) : src.replaceAll('\\', '/');
-    const mime = getMimeTypeFromFilename(videoSrc);
-    styles.push('max-width:100%;', 'height:auto;'); //TODO: remove when antoine merge his PR about styles
-    fileNode.append(`<div class="video"><video controls `);
-    if (styles.length > 0) {
-      fileNode.append(`style="${styles.join(' ')}"`);
-    }
-    fileNode.append(
-      `><source src="${videoSrc}" type="${mime}">Your browser does not support the video tag.</source></video></div>`,
-    );
-  }
-
-  function getYouTubeEmbed(link: string): string | null {
-    if (!link) return null;
-    const clean = sanitizeLink(link);
-    const watchMatch = clean.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
-    if (watchMatch?.[1]) return `https://www.youtube.com/embed/${watchMatch[1]}`;
-    const shortMatch = clean.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
-    if (shortMatch?.[1]) return `https://www.youtube.com/embed/${shortMatch[1]}`;
-    const embedMatch = clean.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
-    if (embedMatch?.[1]) return `https://www.youtube.com/embed/${embedMatch[1]}`;
-    return null;
-  }
-
-  function getMimeTypeFromFilename(filename: string): string {
-    if (!filename) return 'video/mp4';
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
-    switch (ext) {
-      case 'mp4':
-        return 'video/mp4';
-      case 'webm':
-        return 'video/webm';
-      case 'ogg':
-        return 'video/ogg';
-      case 'mpg':
-      case 'mpeg':
-        return 'video/mpeg';
-      case 'wmv':
-        return 'video/x-ms-wmv';
-      default:
-        return 'video/mp4';
-    }
-  }
-
-  function generateText(text: Text, fileNode: CompositeGeneratorNode) {
-    fileNode.append('<div class="text">');
-
-    if (isCode(text)) {
-      // generateCode(text, fileNode); TODO
-    } else if (isParagraph(text)) {
-      generateParagraph(text, fileNode);
-    } else if (isList(text)) {
-      // generateList(text, fileNode); TODO
-    } else {
-      throw new Error(`Unsupported Text type: ${text.$type}`);
-    }
-
-    fileNode.append('</div>');
-  }
-
-  function generateParagraph(paragraph: Paragraph, fileNode: CompositeGeneratorNode) {
-    switch (paragraph.type) {
-      case 'title':
-        fileNode.append(`<h1 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h1>`);
-        break;
-
-      case 'subtitle':
-        fileNode.append(`<h2 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h2>`);
-        break;
-
-      case 'text':
-        fileNode.append(`<p style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</p>`);
-        break;
-
-      default:
-        throw new Error(`Unknown paragraph type: ${paragraph.type}`);
-    }
+    default:
+      throw new Error(`Unknown paragraph type: ${paragraph.type}`);
   }
 }

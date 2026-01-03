@@ -110,7 +110,7 @@ export class SlideMLValidator {
   private checkImageLinks(node: AstNode, accept: ValidationAcceptor): void {
     const imageLinks = this.extractImageLinks(node);
     imageLinks.forEach((link) => {
-      if (!this.isValidImageLink(link)) {
+      if (!this.isValidLink(link)) {
         accept('warning', 'Le lien de l’image semble étrange, veuillez vérifier : ' + link, { node });
       }
     });
@@ -132,7 +132,7 @@ export class SlideMLValidator {
     return links;
   }
 
-  private isValidImageLink(link: string): boolean {
+  private isValidLink(link: string): boolean {
     // Logique pour vérifier si le lien est valide
     return link.startsWith('http') || link.startsWith('https');
   }
@@ -140,7 +140,7 @@ export class SlideMLValidator {
   private checkVideoLinks(node: AstNode, accept: ValidationAcceptor): void {
     const videoLinks = this.extractVideoLinks(node);
     videoLinks.forEach((link) => {
-      if (!this.isValidVideoLink(link)) {
+      if (!this.isValidLink(link)) {
         accept('warning', 'Le lien de la vidéo semble étrange, veuillez vérifier : ' + link, { node });
       }
     });
@@ -160,10 +160,5 @@ export class SlideMLValidator {
       }
     }
     return links;
-  }
-
-  private isValidVideoLink(link: string): boolean {
-    // Logique pour vérifier si le lien est valide
-    return link.startsWith('http') || link.startsWith('https');
   }
 }
