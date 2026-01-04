@@ -11,6 +11,8 @@ import {
   Text,
   isText,
   isCode,
+  Equation,
+  isEquation,
   Paragraph,
   isParagraph,
   isList,
@@ -86,6 +88,10 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"><\/script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+    
     <style>
   body { font-family: Arial, sans-serif; }
 
@@ -138,6 +144,14 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   padding: 14px 14px;
   border-radius: 12px;
   
+}
+
+.equation-display {
+    margin: 20px 0;
+    text-align: center;
+}
+.equation-inline {
+    display: inline;
 }
 
 .quiz-side .qr{
@@ -966,6 +980,8 @@ function generateText(
 
   if (isCode(text)) {
     generateCode(text, fileNode);
+  } else if (isEquation(text)) {
+    generateEquation(text, fileNode);
   } else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
   } else if (isList(text)) {
@@ -1121,4 +1137,24 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 })();
 </script>
 `);
+}
+
+function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) {
+  // Remove surrounding quotes from content if present
+  let content = equation.content;
+  if (content.startsWith('"') && content.endsWith('"')) {
+    content = content.substring(1, content.length - 1);
+  }
+
+  // Display mode: block equation (centered, larger)
+  // Inline mode: inline equation (smaller, within text flow)
+  const isDisplay = equation.display ?? false;
+
+  if (isDisplay) {
+    // Block equation using \[...\] delimiters (MathJax display mode)
+    fileNode.append(`<div class="equation-display">\\[${content}\\]</div>`);
+  } else {
+    // Inline equation using \\(...\\) delimiters (MathJax inline mode)
+    fileNode.append(`<span class="equation-inline">\\(${content}\\)</span>`);
+  }
 }

@@ -76,7 +76,7 @@ Group:
 ;
 
 Text:
-  (Code | BasicText)
+  (Code | Equation | BasicText)
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
@@ -87,11 +87,16 @@ Code:
   ('language:' language=STRING)?
   ('animated:' animated=BOOLEAN)?
   content=STRING
-  ('explanations:' 
+  ('explanations:'
     explanations+=CodeExplanation+)?;
 
 CodeExplanation:
   '-' line=NUMBER ":" content=STRING;
+
+Equation:
+  'equation:'
+  ('display:' display=BOOLEAN)?
+  'content:' content=STRING;
 
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
@@ -102,7 +107,7 @@ Paragraph:
 List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
-    '-'items+=STRING 
+    '-'items+=STRING
     ('-' items+=STRING)*
 ;
 
@@ -124,8 +129,8 @@ Video:
 
 Quiz:
   'quiz:'
-    ('link:' link=STRING 
-    ('joinCode:' joinCode=STRING)? 
+    ('link:' link=STRING
+    ('joinCode:' joinCode=STRING)?
     ('joinUrl:' joinUrl=STRING)? |
      personnalisedQuiz=PersonnalisedQuiz)
   (style=Style)?
@@ -150,8 +155,8 @@ Question:
 ;
 
 Option:
-  '-option:' 
-      answer=STRING 
+  '-option:'
+      answer=STRING
       "correct:" correct=BOOLEAN;
 
 Style:
@@ -252,7 +257,7 @@ ComplexAnimation:
 
 Transition:
   'transition:' 
-    'type:' type=EffectToken 
+    'type:' type=EffectToken
     ('duration:' duration=DurationType)?;
 
 TextAlignment returns string:
