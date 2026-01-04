@@ -3,11 +3,11 @@ grammar SlideML
 
 entry Model:
   (
-      definitions+=Template
-      (definitions+=Presentation)?
+      template=Template
+      (presentation=Presentation)?
     ) | (
-      (definitions+=Template)?
-      presentations+=Presentation
+      (template=Template)?
+      presentation=Presentation
     );
 
 
