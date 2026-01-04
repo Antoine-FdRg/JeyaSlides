@@ -1,11 +1,11 @@
 presentation: 
   name: "Style tests!" 
-  author: "Antoine"
+  author: "Emma"
   slides:
     -slide:
       transition:
         type: zoom-in
-        duration: 300
+        duration: slow
       elements:
         -text: 
           content: "test zoom-in"
@@ -15,19 +15,19 @@ presentation:
     -slide:
       transition:
         type: zoom
-        duration: 700
+        duration: fast
       elements:
         -text: 
-          content: "Test zoom à 700ms"
+          content: "Test zoom à fast"
           
 
     -slide:
       transition:
         type: convex
-        duration: 1100
+        duration: fast
       elements:
         -text: 
-          content: "test convex à 1100 ms"
+          content: "test convex à fast"
           style:
             size:
               width: 70
@@ -38,10 +38,10 @@ presentation:
     -slide:
       transition:
         type: concave
-        duration: 900
+        duration: default
       elements:
         -text: 
-          content: "Test concave à 900ms"
+          content: "Test concave à default"
           style:
             size:
               width: 10
@@ -52,10 +52,10 @@ presentation:
     -slide:
       transition:
         type: slide
-        duration: 300
+        duration: slow
       elements:
         -text: 
-            content: "test transition slide 300ms"
+            content: "test transition slide slow"
             style:
             size:
                 width: 70
@@ -64,10 +64,10 @@ presentation:
     -slide:
       transition:
         type: fade
-        duration: 400
+        duration: default
       elements:
         -text: 
-          content: "Text fade à 400ms"
+          content: "Text fade à default"
           style:
             backgroundColor: #a0a005
             font:
@@ -77,10 +77,10 @@ presentation:
     -slide:
       transition:
         type: zoom-in fade-out
-        duration: 1200
+        duration: fast
       elements:
         -text: 
-          content: "Test zoom-in fade-out à 1200ms"
+          content: "Test zoom-in fade-out à fast"
           style:
             backgroundColor: #5a05a0
             font:

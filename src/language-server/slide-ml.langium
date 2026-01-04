@@ -178,12 +178,15 @@ ComplexAnimation:
 Transition:
   'transition:' 
     'type:' type=EffectToken (second=EffectToken)?
-    ('duration:' duration=NUMBER)?;
+    ('duration:' duration=DurationType)?;
 
 TextAlignment returns string:
   'left' | 'center' | 'right' | 'justify';
 TextType returns string:
   'title' | 'subtitle' | 'text';
+
+DurationType returns string:
+  'fast' | 'default' | 'slow';
 
 
 terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;

@@ -147,7 +147,7 @@ function generatePresentationSlides(presentation: Presentation, fileNode: Compos
   }
 }
 
-type SlideMLTransition = { type: string; duration?: number } | undefined;
+type SlideMLTransition = { type: string; duration?: string } | undefined;
 
 function getRevealTransitionAttributes(transition: SlideMLTransition): string {
   if (!transition) return '';
@@ -175,18 +175,19 @@ function normalizeRevealTransitionValue(value: string | undefined): string | und
   return undefined;
 }
 
-function mapDurationToRevealSpeed(duration: number | undefined): 'fast' | 'default' | 'slow' | undefined {
-  if (duration === undefined || duration === null) return undefined;
-  if (duration <= 400) return 'fast';
-  if (duration >= 900) return 'slow';
-  return 'default';
+function mapDurationToRevealSpeed(duration: string | undefined): 'fast' | 'default' | 'slow' {
+  if (duration === undefined) return 'default';
+  if (duration !== 'fast' && duration !== 'default' && duration !== 'slow') {
+    return 'default';
+  }
+  return duration;
 }
 
 function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
   const normalizedTransition = slide.transition
     ? {
         type: slide.transition.type,
-        duration: slide.transition.duration ? parseInt(slide.transition.duration, 10) : undefined,
+        duration: slide.transition.duration ? slide.transition.duration : 'default',
       }
     : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
