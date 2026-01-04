@@ -57,15 +57,20 @@ Group:
 ;
 
 Text:
-  (Code | BasicText)
+  (Code | Equation | BasicText)
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
 ;
 
 Code:
-  'code:' 
-  'language:' language=STRING 
+  'code:'
+  'language:' language=STRING
+  'content:' content=STRING;
+
+Equation:
+  'equation:'
+  ('display:' display=BOOLEAN)?
   'content:' content=STRING;
 
 BasicText:
