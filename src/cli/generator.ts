@@ -55,10 +55,11 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode) {
         <div class="slides">`);
 
   // Generate slides for each presentation
-  const presentations = model.presentations ?? [];
-  for (const presentation of presentations) {
-    generatePresentationSlides(presentation, fileNode);
+  const presentation = model.presentation;
+  if (!presentation) {
+    throw new Error('No presentation found');
   }
+  generatePresentationSlides(presentation, fileNode);
 
   fileNode.append(`
         </div>
@@ -73,6 +74,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode) {
             minScale: 0.2,
             maxScale: 2.0,
             disableLayout: true,
+            slideNumber: ${presentation.displaySlideNumber ?? false}
         });
 
     <\/script>
