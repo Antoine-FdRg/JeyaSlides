@@ -159,7 +159,7 @@ EnumXPosition returns string:
 EnumYPosition returns string:
   'top' | 'center' | 'bottom';
 EnumZPosition returns string:
-  'front' | 'behind';
+  'front' | 'back';
 
 
 Animation:
