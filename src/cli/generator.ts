@@ -22,6 +22,7 @@ import {
   YPosition,
   ZPosition,
   isCoordinatePosition,
+  isBasicText,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 
@@ -453,6 +454,11 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
 
 function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[]) {
   fileNode.append('<div class="text"');
+  if (isBasicText(text)) {
+    if (text.align) {
+      styles.push(`display:flex; justify-content: ${text.align};`);
+    }
+  }
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }

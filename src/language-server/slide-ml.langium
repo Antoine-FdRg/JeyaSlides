@@ -69,18 +69,19 @@ Code:
   'content:' content=STRING;
 
 BasicText:
-  (Paragraph | List) ('align:' TextAlignment)?;
+  (Paragraph | List) ('align:' align=TextAlignment)?;
 
 Paragraph:
   type=TextType  ':' 
     'content:'content=STRING;
 
-  List:
+List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
     'items:' 
       '-'items+=STRING 
-      ('-' items+=STRING)*;
+      ('-' items+=STRING)*
+;
 
 Image:
   'image:'
