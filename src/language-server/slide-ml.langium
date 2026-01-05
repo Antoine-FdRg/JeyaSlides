@@ -177,7 +177,7 @@ ComplexAnimation:
 
 Transition:
   'transition:' 
-    'type:' type=EffectToken (second=EffectToken)?
+    'type:' type=EffectToken 
     ('duration:' duration=DurationType)?;
 
 TextAlignment returns string:

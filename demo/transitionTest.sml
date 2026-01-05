@@ -76,11 +76,11 @@ presentation:
 
     -slide:
       transition:
-        type: zoom-in fade-out
+        type: fade-out
         duration: fast
       elements:
         -text: 
-          content: "Test zoom-in fade-out à fast"
+          content: "Test fade-out à fast"
           style:
             backgroundColor: #5a05a0
             font:

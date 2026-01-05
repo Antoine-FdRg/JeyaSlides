@@ -168,9 +168,8 @@ function normalizeRevealTransitionValue(value: string | undefined): string | und
   const cleaned = value.trim().replaceAll(/\s+/g, ' ');
   const base = '(none|fade|slide|convex|concave|zoom)';
   const single = new RegExp(`^${base}(-in|-out)?$`);
-  const combo = new RegExp(`^${base}-in ${base}-out$`);
 
-  if (single.test(cleaned) || combo.test(cleaned)) return cleaned;
+  if (single.test(cleaned)) return cleaned;
 
   return undefined;
 }
