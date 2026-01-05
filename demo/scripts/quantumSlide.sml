@@ -1,6 +1,4 @@
 presentation:
-  name: "Introduction to Quantum Physics"
-  author: "Quantik"
   slides:
     -slide:
       elements:
