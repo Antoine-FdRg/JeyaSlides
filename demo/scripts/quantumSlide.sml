@@ -15,6 +15,9 @@ presentation:
             -text:
               content: "What is Superposition?"
               align: center
+          style: 
+            size:
+              width: 80
             -text:
               content: "A quantum system can exist in multiple states at once."
               align: center

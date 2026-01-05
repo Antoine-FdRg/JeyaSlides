@@ -7,17 +7,19 @@ export function registerValidationChecks(services: SlideMLServices) {
   const validator = services.validation.SlideMLValidator;
 
   const checks: ValidationChecks<AstTypeList<JeyaSlidesAstType>> = {
-    Template: validator.checkPropertyFormatting,
-    Presentation: validator.checkPropertyFormatting,
-    Slide: validator.checkPropertyFormatting,
-    Element: validator.checkPropertyFormatting,
+    Template: validator.validate,
+    Presentation: validator.validate,
+    Slide: validator.validate,
+    Element: validator.validate,
+    XPosition: validator.validatePosition,
+    YPosition: validator.validatePosition,
   };
 
   registry.register(checks, validator);
 }
 
 export class SlideMLValidator {
-  checkPropertyFormatting(node: AstNode, accept: ValidationAcceptor): void {
+  validate(node: AstNode, accept: ValidationAcceptor): void {
     const $cstNode = node.$cstNode;
     if (!$cstNode) return;
 
@@ -160,5 +162,21 @@ export class SlideMLValidator {
       }
     }
     return links;
+  }
+
+  validatePosition(node: AstNode, accept: ValidationAcceptor): void {
+    if (node.$cstNode) {
+      const text = node.$cstNode.text.trim();
+      const value = parseFloat(text);
+      if (value < 0) {
+        accept('warning', `La position est négative, l'élément risque d'être invisible.`, { node });
+        return;
+      }
+
+      if (value > 100) {
+        accept('warning', `La position est supérieure à 100, l'élément risque d'être invisible.`, { node });
+        return;
+      }
+    }
   }
 }
