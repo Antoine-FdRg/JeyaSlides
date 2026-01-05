@@ -18,13 +18,19 @@ import {
   isImage,
   Video,
   isVideo,
+  XPosition,
+  YPosition,
+  ZPosition,
+  isCoordinatePosition,
+  isBasicText,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
 const DEFAULT_TEXT_STYLE = 'margin: 0;';
-
+const ZINDEX_BACK_VALUE = -10;
+const ZINDEX_FRONT_VALUE = 100;
 type TemplateContext = {
   titleElements?: Element[];
   bodyElements?: Element[];
@@ -187,12 +193,44 @@ function generatePresentationSlides(presentation: Presentation, fileNode: Compos
   //           </section>`);
 
   // Generate content slides
-  // for (const slide of presentation.slides) {
-  //   generateSlide(slide, templateCtx, fileNode);
-  // }
   presentation.slides.forEach((slide, index) => {
     generateSlide(slide, index, templateCtx, fileNode);
   });
+}
+
+type SlideMLTransition = { type: string; duration?: string } | undefined;
+
+function getRevealTransitionAttributes(transition: SlideMLTransition): string {
+  if (!transition) return '';
+
+  const revealTransition = normalizeRevealTransitionValue(transition.type);
+  const speedAttr = mapDurationToRevealSpeed(transition.duration);
+
+  const attrs: string[] = [];
+  if (revealTransition) attrs.push(`data-transition="${revealTransition}"`);
+  if (speedAttr) attrs.push(`data-transition-speed="${speedAttr}"`);
+
+  return attrs.length ? ' ' + attrs.join(' ') : '';
+}
+
+function normalizeRevealTransitionValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const cleaned = value.trim().replaceAll(/\s+/g, ' ');
+  const base = '(none|fade|slide|convex|concave|zoom)';
+  const single = new RegExp(`^${base}(-in|-out)?$`);
+
+  if (single.test(cleaned)) return cleaned;
+
+  return undefined;
+}
+
+function mapDurationToRevealSpeed(duration: string | undefined): 'fast' | 'default' | 'slow' {
+  if (duration === undefined) return 'default';
+  if (duration !== 'fast' && duration !== 'default' && duration !== 'slow') {
+    return 'default';
+  }
+  return duration;
 }
 
 function generateSlide(
@@ -201,6 +239,14 @@ function generateSlide(
   template: TemplateContext | undefined,
   fileNode: CompositeGeneratorNode
 ) {
+  const normalizedTransition = slide.transition
+    ? {
+        type: slide.transition.type,
+        duration: slide.transition.duration ? slide.transition.duration : 'default',
+      }
+    : undefined;
+  const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
+
   const bg = template?.style?.backgroundColor;
   const font = template?.style?.font;
 
@@ -213,7 +259,9 @@ function generateSlide(
     ${font?.size ? `font-size: ${font.size}px;` : ''}
   `;
 
-  fileNode.append(`<section style="${slideStyle}">`);
+  fileNode.append(`<section${transitionAttrs} style="${slideStyle}">`);
+  // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
+  fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
 
   const templateElements =
     index === 0
@@ -228,16 +276,22 @@ function generateSlide(
     generateElement(el, fileNode)
   );
 
+  fileNode.append('</div>');
   fileNode.append('</section>');
 }
 
 function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[]) {
+  const groupStyles = [...styles];
+  const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
+  if (!hasPosition) {
+    groupStyles.unshift('position: relative;'); // position relative si le groupe n'a pas de position définie
+  }
+
   fileNode.append('<div class="group"');
-  if (styles.length > 0) {
-    fileNode.append(` style="${styles.join(' ')}"`);
+  if (groupStyles.length > 0) {
+    fileNode.append(` style="${groupStyles.join(' ')}"`);
   }
   fileNode.append('>');
-  // applyPosition(group.position); TODO
   // applyAnimation(group.animation); TODO
 
   for (const child of group.elements) {
@@ -249,6 +303,7 @@ function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: S
 
 function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
   const styles: String[] = getElementStyles(element);
+  styles.push(getElementPosition(element));
   if (isGroup(element)) return generateGroup(element, fileNode, styles);
   if (isText(element)) return generateText(element, fileNode, styles);
   if (isImage(element)) return generateImage(element, fileNode, styles);
@@ -310,6 +365,108 @@ function getElementStyles(element: Element): String[] {
       }
     }
     return fontStyles;
+  }
+}
+
+function getElementPosition(element: Element): String {
+  if (!element.position) return '';
+  let positionStyles: String[] = [];
+  let transformStyles: String[] = [];
+  getXPosition(element.position.x, positionStyles, transformStyles);
+  getYPosition(element.position.y, positionStyles, transformStyles);
+  getZPosition(element.position.z, positionStyles);
+
+  if (positionStyles.length > 0) {
+    positionStyles.unshift('position: absolute;'); // position absolute si une position est définie pour positionner par rapport au conteneur parent
+  }
+
+  if (transformStyles.length > 0) {
+    positionStyles.push(`transform: ${transformStyles.join(' ')};`);
+  }
+  return positionStyles.join(' ');
+
+  /**
+   * Ajoute les styles de positionnement horizontal à la liste des styles et de transformation
+   * @param x la position horizontale
+   * @param styles la liste des styles
+   * @param transformStyles la liste des styles de transformation
+   */
+  function getXPosition(x: XPosition | undefined, styles: String[], transformStyles: String[]) {
+    if (!x) return;
+    if (isCoordinatePosition(x)) {
+      if (x.value !== undefined) {
+        styles.push(`left: ${x.value}%;`);
+        transformStyles.push('translateX(-50%)');
+      }
+    } else {
+      const value = (x as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'left':
+          styles.push('left: 2%;');
+          break;
+        case 'center':
+          styles.push('left: 50%;');
+          transformStyles.push('translateX(-50%)');
+          break;
+        case 'right':
+          styles.push('right: 2%;');
+          break;
+      }
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement vertical à la liste des styles et de transformation
+   * @param y la position verticale
+   * @param styles la liste des styles
+   * @param transformStyles la liste des styles de transformation
+   */
+  function getYPosition(y: YPosition | undefined, styles: String[], transformStyles: String[]) {
+    if (!y) return;
+    if (isCoordinatePosition(y)) {
+      if (y.value !== undefined) {
+        styles.push(`top: ${y.value}%;`);
+        transformStyles.push('translateY(-50%)');
+      }
+    } else {
+      const value = (y as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'top':
+          styles.push('top: 2%;');
+          break;
+        case 'center':
+          styles.push('top: 50%;');
+          transformStyles.push('translateY(-50%)');
+          break;
+        case 'bottom':
+          styles.push('bottom: 2%;');
+          break;
+      }
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement en Z à la liste des styles
+   * @param z la position en Z
+   * @param styles la liste des styles
+   */
+  function getZPosition(z: ZPosition | undefined, styles: String[]) {
+    if (!z) return;
+    if (isCoordinatePosition(z)) {
+      if (z.value !== undefined) {
+        styles.push(`z-index: ${z.value};`);
+      }
+    } else {
+      const value = (z as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'front':
+          styles.push(`z-index:${ZINDEX_FRONT_VALUE};`);
+          break;
+        case 'back':
+          styles.push(`z-index: ${ZINDEX_BACK_VALUE};`);
+          break;
+      }
+    }
   }
 }
 
@@ -419,6 +576,11 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
 
 function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[]) {
   fileNode.append('<div class="text"');
+  if (isBasicText(text)) {
+    if (text.align) {
+      styles.push(`display:flex; justify-content: ${text.align};`);
+    }
+  }
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }

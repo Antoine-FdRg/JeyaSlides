@@ -72,18 +72,19 @@ Code:
   'content:' content=STRING;
 
 BasicText:
-  (Paragraph | List) ('align:' TextAlignment)?;
+  (Paragraph | List) ('align:' align=TextAlignment)?;
 
 Paragraph:
   type=TextType  ':' 
     'content:'content=STRING;
 
-  List:
+List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
     'items:' 
       '-'items+=STRING 
-      ('-' items+=STRING)*;
+      ('-' items+=STRING)*
+;
 
 Image:
   'image:'
@@ -162,8 +163,10 @@ EnumXPosition returns string:
 EnumYPosition returns string:
   'top' | 'center' | 'bottom';
 EnumZPosition returns string:
-  'front' | 'behind';
+  'front' | 'back';
 
+
+terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
 
 Animation:
   "animation:"  
@@ -171,23 +174,22 @@ Animation:
     ComplexAnimation?;
 
 ComplexAnimation:
-  'type:' animationType=AnimationType 
-      ('duration:' duration=NUMBER)?;
+  'type:' animationType=EffectToken
+  ('duration:' duration=NUMBER)?;
 
-terminal AnimationType: 'fade-in' | 'zoom-in';
 
 Transition:
   'transition:' 
-    'type:' type=TransitionType 
-    ('duration:' duration=NUMBER)?;
-
-terminal TransitionType: 'slide-left' | 'slide-top';
-
+    'type:' type=EffectToken 
+    ('duration:' duration=DurationType)?;
 
 TextAlignment returns string:
   'left' | 'center' | 'right' | 'justify';
 TextType returns string:
   'title' | 'subtitle' | 'text';
+
+DurationType returns string:
+  'fast' | 'default' | 'slow';
 
 
 terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
