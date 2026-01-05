@@ -88,9 +88,8 @@ presentation:
           style:
             backgroundColor: #4bf14b
             position:
-              x: 20
-              y: 30
-        
+              x: -20
+              y: 300
         -text:
           content: "Positioned at (50, 50)"
           style:
@@ -188,7 +187,7 @@ presentation:
                 style:
                   backgroundColor: #522
                   position:
-                    x: 50
+                    x: -50
                     y: top
                 -text: 
                   content: "left 50 in the parent group"
