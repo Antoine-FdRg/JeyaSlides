@@ -73,6 +73,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   fileNode.append(`
         </div>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
     <script>
       // Open an image in a fullscreen overlay. Accepts an HTMLImageElement or a URL string.
@@ -102,7 +103,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
       }
     <\/script>
     <script>
-        Reveal.initialize({
+        Reveal.initialize([{
             hash: true,
             center: true,
             transition: 'slide',
@@ -110,8 +111,8 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
             maxScale: 2.0,
             disableLayout: true,
             slideNumber: ${presentation.displaySlideNumber ?? false}
-        });
-
+  },
+  { src: 'plugin/quiz/js/quiz.js', async: true, callback: function() { prepareQuizzes({}); }]);
     <\/script>
   </body>
   </html>`);

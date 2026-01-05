@@ -75,7 +75,7 @@ Paragraph:
   type=TextType  ':' 
     'content:'content=STRING;
 
-  List:
+List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
     'items:' 
@@ -104,6 +104,12 @@ Quiz:
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
+;
+
+PersonnalisedQuiz:
+  '-info:'
+      'title:' title=STRING
+  '-questions:'
 ;
 
 Style:
