@@ -20,9 +20,15 @@ import {
   isVideo,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
+import { parseTemplate } from './template-parser';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
 const DEFAULT_TEXT_STYLE = 'margin: 0;';
+
+type TemplateContext = {
+  titleElements?: Element[];
+  bodyElements?: Element[];
+};
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
   const data = extractDestinationAndName(filePath, destination);
@@ -40,10 +46,12 @@ export function generateRevealJsFile(model: Model, filePath: string, destination
 
 let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
+let PROJECT_ROOT = '.'; 
 
 function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
+PROJECT_ROOT = path.resolve(__dirname, '..', '..');
   // Generate HTML header
   fileNode.append(`<!DOCTYPE html>
 <html lang="en">
@@ -117,35 +125,95 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   </html>`);
 }
 
-function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
-  // Generate title slide
-  let author = presentation.author ?? 'Anonymous';
-  if (author.startsWith('"') && author.endsWith('"')) {
-    author = author.substring(1, author.length - 1);
+function loadTemplate(presentation: Presentation): TemplateContext | undefined {
+  console.log('[Template] Loading template...');
+  if (!presentation.template) return undefined;
+
+  const templateName = sanitizeLink(presentation.template);
+  const templateRoot = path.resolve(
+    PROJECT_ROOT,
+    'templates',
+    templateName
+  );
+
+  const templatePath = path.join(templateRoot, `${templateName}.sml`);
+
+  if (!fs.existsSync(templatePath)) {
+    console.warn(`Template '${templateName}' not found at ${templatePath}`);
+    return undefined;
   }
 
-  let title = presentation.name;
-  if (title.startsWith('"') && title.endsWith('"')) {
-    title = title.substring(1, title.length - 1);
-  }
+  const templateModel = parseTemplate(templatePath);
 
-  fileNode.append(`
-            <section>
-                <h1>${title}</h1>
-                <p>by ${author}</p>
-            </section>`);
+  console.log('[Template] Requested template:', presentation.template);
+  console.log('[Template] Template path:', templatePath);
 
-  // Generate content slides
-  for (const slide of presentation.slides) {
-    generateSlide(slide, fileNode);
-  }
+  console.log('[Template] slots:', {
+    title: templateModel.titleTemplate?.elements.length,
+    body: templateModel.bodyTemplate?.elements.length
+  });
+
+  return {
+    titleElements: templateModel.titleTemplate?.elements,
+    bodyElements: templateModel.bodyTemplate?.elements,
+  };
 }
 
-function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
+function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
+  const templateCtx = loadTemplate(presentation);
+  // let author = presentation.author ?? 'Anonymous';
+  // if (author.startsWith('"') && author.endsWith('"')) {
+  //   author = author.substring(1, author.length - 1);
+  // }
+
+  // let title = presentation.name;
+  // if (title.startsWith('"') && title.endsWith('"')) {
+  //   title = title.substring(1, title.length - 1);
+  // }
+
+  // fileNode.append(`
+  //           <section>
+  //               <h1>${title}</h1>
+  //               <p>by ${author+"jess"}</p>
+  //           </section>`);
+
+  // Generate content slides
+  // for (const slide of presentation.slides) {
+  //   generateSlide(slide, templateCtx, fileNode);
+  // }
+  presentation.slides.forEach((slide, index) => {
+    generateSlide(slide, index, templateCtx, fileNode);
+  });
+}
+
+function generateSlide(
+  slide: Slide,
+  index: number,
+  template: TemplateContext | undefined,
+  fileNode: CompositeGeneratorNode
+) {
   fileNode.append('<section style="width: 100%; height: 100%;">');
-  for (const element of slide.elements) {
-    generateElement(element, fileNode);
-  }
+
+  const templateElements =
+    index === 0
+      ? template?.titleElements
+      : template?.bodyElements;
+
+  console.log(
+    `[Slide ${index}] using template:`,
+    index === 0 ? 'TITLE' : 'BODY',
+    'elements:',
+    templateElements?.length
+  );
+
+  templateElements?.forEach(el =>
+    generateElement(el, fileNode)
+  );
+
+  slide.elements.forEach(el =>
+    generateElement(el, fileNode)
+  );
+
   fileNode.append('</section>');
 }
 
