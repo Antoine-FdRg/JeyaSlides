@@ -273,9 +273,19 @@ export class PreviewPanel {
       const savedPosition = ${JSON.stringify(this._lastSlidePosition)};
       
       Reveal.on('ready', () => {
-        // Restore the last slide position
-        if (savedPosition) {
+        // Restore the last slide position without transition
+        if (savedPosition && (savedPosition.h !== 0 || savedPosition.v !== 0)) {
+          // Temporarily disable transitions for the restore
+          const currentTransition = Reveal.getConfig().transition;
+          Reveal.configure({ transition: 'none' });
+          
+          // Restore position
           Reveal.slide(savedPosition.h, savedPosition.v, savedPosition.f);
+          
+          // Re-enable transitions after a short delay
+          setTimeout(() => {
+            Reveal.configure({ transition: currentTransition });
+          }, 50);
         }
       });
       
