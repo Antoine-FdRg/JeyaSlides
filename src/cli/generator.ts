@@ -28,6 +28,14 @@ const DEFAULT_TEXT_STYLE = 'margin: 0;';
 type TemplateContext = {
   titleElements?: Element[];
   bodyElements?: Element[];
+  style?: {
+    backgroundColor?: string;
+    font?: {
+      name?: string;
+      size?: string;
+      color?: string;
+    };
+  };
 };
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
@@ -156,6 +164,7 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
   return {
     titleElements: templateModel.titleTemplate?.elements,
     bodyElements: templateModel.bodyTemplate?.elements,
+    style: templateModel.style
   };
 }
 
@@ -192,19 +201,24 @@ function generateSlide(
   template: TemplateContext | undefined,
   fileNode: CompositeGeneratorNode
 ) {
-  fileNode.append('<section style="width: 100%; height: 100%;">');
+  const bg = template?.style?.backgroundColor;
+  const font = template?.style?.font;
+
+  const slideStyle = `
+    width: 100%;
+    height: 100%;
+    ${bg ? `background-color: ${bg};` : ''}
+    ${font?.name ? `font-family: ${font.name};` : ''}
+    ${font?.color ? `color: ${font.color};` : ''}
+    ${font?.size ? `font-size: ${font.size}px;` : ''}
+  `;
+
+  fileNode.append(`<section style="${slideStyle}">`);
 
   const templateElements =
     index === 0
       ? template?.titleElements
       : template?.bodyElements;
-
-  console.log(
-    `[Slide ${index}] using template:`,
-    index === 0 ? 'TITLE' : 'BODY',
-    'elements:',
-    templateElements?.length
-  );
 
   templateElements?.forEach(el =>
     generateElement(el, fileNode)

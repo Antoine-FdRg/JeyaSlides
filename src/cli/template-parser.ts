@@ -17,9 +17,10 @@ export function parseTemplate(templatePath: string): Template {
       uri
     );
 
-  services.shared.workspace.DocumentBuilder.build([document], {
-    validationChecks: 'none'
-  });
+  console.log('PARSER ERRORS:', document.parseResult.parserErrors);
+  console.log('LEXER ERRORS:', document.parseResult.lexerErrors);
+
+  services.shared.workspace.DocumentBuilder.build([document]);
 
   const model = document.parseResult.value;
 
