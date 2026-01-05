@@ -846,10 +846,31 @@ function generateParagraph(
   const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
 
   const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
-
+  paragraph.content = markdownToHtml(paragraph.content);
   fileNode.append(
     `<${tag} style="${DEFAULT_TEXT_STYLE}${resolvedStyles.join(' ')}">
       ${paragraph.content}
      </${tag}>`,
   );
+  
+  function markdownToHtml(markdown: string): string {
+    if (!markdown) return '';
+    let html = markdown;
+
+    // Bold **text**
+    html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    // Italic *text*
+    html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+    // Underline __text__
+    html = html.replace(/__(.+?)__/g, '<u>$1</u>');
+    // Strikethrough ~~text~~
+    html = html.replace(/~~(.+?)~~/g, '<s>$1</s>');
+    // Inline code `code`
+    html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+    // Links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    // Line breaks
+    html = html.replace(/\n/g, '<br/>');
+    return html;
+  }
 }
