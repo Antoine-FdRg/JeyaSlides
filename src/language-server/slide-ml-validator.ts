@@ -11,6 +11,9 @@ export function registerValidationChecks(services: SlideMLServices) {
     Presentation: validator.validate,
     Slide: validator.validate,
     Element: validator.validate,
+    Font: validator.validateNotEmpty,
+    Style: validator.validateNotEmpty,
+    Position: validator.validateNotEmpty,
     XPosition: validator.validatePosition,
     YPosition: validator.validatePosition,
   };
@@ -165,7 +168,7 @@ export class SlideMLValidator {
     }
     return links;
   }
-private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept: ValidationAcceptor): void {
+  private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept: ValidationAcceptor): void {
     const validDurations = ['fast', 'default', 'slow'];
 
     let currentSection: string | null = null;
@@ -239,6 +242,16 @@ private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept:
     const val = after.trim().split(/\s+/)[0] || '';
     if (!validDurations.includes(val)) {
       accept('warning', 'vous avez inscrit une valeur inccorecte', { node, property: undefined });
+    }
+  }
+
+  validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
+    if (node.$cstNode) {
+      const fieldName = node.$type;
+      const text = node.$cstNode.text.split(':')[1]?.trim() || '';
+      if (text === '') {
+        accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
+      }
     }
   }
 
