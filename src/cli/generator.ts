@@ -844,11 +844,11 @@ function generateParagraph(
   template?: TemplateContext,
 ) {
   const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
-
+  const alignStyle = paragraph.align ? `text-align: ${paragraph.align};` : '';
   const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
   paragraph.content = markdownToHtml(paragraph.content);
   fileNode.append(
-    `<${tag} style="${DEFAULT_TEXT_STYLE}${resolvedStyles.join(' ')}">
+    `<${tag} style="${DEFAULT_TEXT_STYLE}${alignStyle}${resolvedStyles.join(' ')}">
       ${paragraph.content}
      </${tag}>`,
   );

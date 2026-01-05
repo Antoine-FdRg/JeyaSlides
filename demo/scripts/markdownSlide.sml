@@ -11,9 +11,12 @@ presentation:
             ~~Strikethrough Text~~
             `Inline Code`
             [Link Text](http://example.com)
+            this line is a quite long line that should wrap around to the next line 
             "
-          align: left
+          align: justify
           style:
+            size:
+              width: 10
             font:
-              size: 12
+              size: 32
 
