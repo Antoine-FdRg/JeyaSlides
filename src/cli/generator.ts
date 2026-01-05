@@ -147,8 +147,51 @@ function generatePresentationSlides(presentation: Presentation, fileNode: Compos
   }
 }
 
+type SlideMLTransition = { type: string; duration?: string } | undefined;
+
+function getRevealTransitionAttributes(transition: SlideMLTransition): string {
+  if (!transition) return '';
+
+  const revealTransition = normalizeRevealTransitionValue(transition.type);
+  const speedAttr = mapDurationToRevealSpeed(transition.duration);
+
+  const attrs: string[] = [];
+  if (revealTransition) attrs.push(`data-transition="${revealTransition}"`);
+  if (speedAttr) attrs.push(`data-transition-speed="${speedAttr}"`);
+
+  return attrs.length ? ' ' + attrs.join(' ') : '';
+}
+
+function normalizeRevealTransitionValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const cleaned = value.trim().replaceAll(/\s+/g, ' ');
+  const base = '(none|fade|slide|convex|concave|zoom)';
+  const single = new RegExp(`^${base}(-in|-out)?$`);
+
+  if (single.test(cleaned)) return cleaned;
+
+  return undefined;
+}
+
+function mapDurationToRevealSpeed(duration: string | undefined): 'fast' | 'default' | 'slow' {
+  if (duration === undefined) return 'default';
+  if (duration !== 'fast' && duration !== 'default' && duration !== 'slow') {
+    return 'default';
+  }
+  return duration;
+}
+
 function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
-  fileNode.append('<section style="width: 100%; height: 100%;">');
+  const normalizedTransition = slide.transition
+    ? {
+        type: slide.transition.type,
+        duration: slide.transition.duration ? slide.transition.duration : 'default',
+      }
+    : undefined;
+  const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
+
+  fileNode.append(`<section style="width: 100%; height: 100%;"${transitionAttrs}>`);
   // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
   fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
   for (const element of slide.elements) {

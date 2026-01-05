@@ -40,6 +40,8 @@ export class SlideMLValidator {
 
     // Vérifier le format des liens de vidéo
     this.checkVideoLinks(node, accept);
+    // Vérifier les valeurs de 'type' et 'duration' pour transition/animation
+    this.checkTransitionAndDurationValues(node, lines, accept);
   }
 
   private checkOneLinePerProperty(lines: string[], accept: ValidationAcceptor, node: AstNode) {
@@ -162,6 +164,82 @@ export class SlideMLValidator {
       }
     }
     return links;
+  }
+private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept: ValidationAcceptor): void {
+    const validDurations = ['fast', 'default', 'slow'];
+
+    let currentSection: string | null = null;
+
+    for (const element of lines) {
+      const rawLine = element;
+      if (this.isIgnoredLine(rawLine)) continue;
+
+      const indent = this.getIndent(rawLine);
+      const trimmed = rawLine.trim();
+
+      currentSection = this.detectSection(trimmed, indent, currentSection);
+
+      if (this.isTypeLine(trimmed)) {
+        this.validateTypeLine(trimmed, currentSection, accept, node);
+      } else if (this.isDurationLine(trimmed)) {
+        this.validateDurationLine(trimmed, currentSection, validDurations, accept, node);
+      }
+    }
+  }
+
+  private isIgnoredLine(line: string | undefined): boolean {
+    if (!line) return true;
+    const t = line.trim();
+    return !t || t.startsWith('//') || t.startsWith('/*');
+  }
+
+  private getIndent(line: string): number {
+    const m = line.match(/^(\s*)/);
+    return m ? m[1].length : 0;
+  }
+
+  private detectSection(trimmed: string, indent: number, currentSection: string | null): string | null {
+    if (/^transition:\s*$/i.test(trimmed)) return 'transition';
+    if (/^animation:\s*$/i.test(trimmed)) return 'animation';
+    if (/^[a-zA-Z_-]+:\s*$/.test(trimmed) && indent === 0) return null;
+    return currentSection;
+  }
+
+  private isTypeLine(trimmed: string): boolean {
+    return /^type:\s*/i.test(trimmed);
+  }
+
+  private isDurationLine(trimmed: string): boolean {
+    return /^duration:\s*/i.test(trimmed);
+  }
+
+  private validateTypeLine(trimmed: string, currentSection: string | null, accept: ValidationAcceptor, node: AstNode) {
+    if (currentSection !== 'transition' && currentSection !== 'animation') return;
+
+    const after = trimmed.split(':')[1] || '';
+    const tokens = after.trim().split(/\s+/).filter(Boolean);
+    for (const tok of tokens) {
+      const m = tok.match(/^(none|fade|slide|convex|concave|zoom)(-in|-out)?$/i);
+      if (!m) {
+        accept('warning', 'vous avez inscrit une valeur inccorecte', { node, property: undefined });
+        break;
+      }
+    }
+  }
+
+  private validateDurationLine(
+    trimmed: string,
+    currentSection: string | null,
+    validDurations: string[],
+    accept: ValidationAcceptor,
+    node: AstNode,
+  ) {
+    if (currentSection !== 'transition') return;
+    const after = trimmed.split(':')[1] || '';
+    const val = after.trim().split(/\s+/)[0] || '';
+    if (!validDurations.includes(val)) {
+      accept('warning', 'vous avez inscrit une valeur inccorecte', { node, property: undefined });
+    }
   }
 
   validatePosition(node: AstNode, accept: ValidationAcceptor): void {
