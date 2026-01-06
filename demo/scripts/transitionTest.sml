@@ -1,4 +1,6 @@
 presentation: 
+  name: "Style tests!" 
+  author: "Emma"
   slides:
     -slide:
       transition:
