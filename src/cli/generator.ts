@@ -78,6 +78,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
     <style>
   body { font-family: Arial, sans-serif; }
 
@@ -161,6 +162,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
+    <script src="https://unpkg.com/tldreveal/dist/bundle/index.js"></script>
     <script>
       // Open an image in a fullscreen overlay. Accepts an HTMLImageElement or a URL string.
       function openImageFullscreen(srcOrElem) {
@@ -190,15 +192,21 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <\/script>
     <script>
         Reveal.initialize({
-            hash: true,
-            center: true,
-            transition: 'slide',
-            minScale: 0.2,
-            maxScale: 2.0,
-            disableLayout: true,
-            slideNumber: ${presentation.displaySlideNumber ?? false}
+          hash: true,
+          center: true,
+          transition: 'slide',
+          width: 2000, // large width to make tldreveal occupy the full space 
+          height: 1125, // large height to make tldreveal occupy the full space
+          minScale: 0.2,
+          maxScale: 2.0,
+          disableLayout: true,
+          slideNumber: ${presentation.displaySlideNumber ?? false},
+          scrollActivationWidth: undefined,
+          plugins: [Tldreveal.Tldreveal()],
+          tldreveal: {
+            disableLayoutWarning: false,
+          },
         });
-
     <\/script>
     <script src="../plugin/quiz/js/jquery.min.js"></script>
     <script src="../plugin/quiz/js/slickQuiz.js"></script>
