@@ -1,6 +1,4 @@
 presentation: 
-  name: "Style tests!" 
-  author: "Antoine"
   slides:
     -slide:
       elements:

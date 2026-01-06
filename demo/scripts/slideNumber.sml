@@ -1,6 +1,4 @@
 presentation: 
-  name: "Hello guys!" 
-  author: "Bob"
   displaySlideNumber: true
   slides: 
     -slide: 

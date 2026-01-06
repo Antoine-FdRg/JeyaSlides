@@ -10,11 +10,11 @@ FILE_NAME=$1
 BASE_NAME=$(basename "$FILE_NAME" .sml)
 
 echo "📄 Generating HTML from $FILE_NAME..."
-cd ../demo
-node ../bin/cli generate ./$FILE_NAME.sml
+cd ../demo/scripts
+node ../../bin/cli generate ./$FILE_NAME.sml -d ../presentationexecutor/generated
 
 echo "🚀 Starting Reveal.js server..."
-cd presentationexecutor
+cd ../presentationexecutor
 
 npm install --silent
 npm start ./generated/$BASE_NAME.html

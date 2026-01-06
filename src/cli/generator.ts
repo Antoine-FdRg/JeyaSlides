@@ -25,11 +25,25 @@ import {
   isBasicText,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
+import { parseTemplate } from './template-parser';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
 const DEFAULT_TEXT_STYLE = 'margin: 0;';
 const ZINDEX_BACK_VALUE = -10;
 const ZINDEX_FRONT_VALUE = 100;
+type TemplateContext = {
+  titleElements?: Element[];
+  bodyElements?: Element[];
+  style?: {
+    backgroundColor?: string;
+    font?: {
+      name?: string;
+      size?: string;
+      color?: string;
+    };
+  };
+};
+
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
   const data = extractDestinationAndName(filePath, destination);
   const generatedFilePath = `${path.join(data.destination, data.name)}.html`;
@@ -46,10 +60,12 @@ export function generateRevealJsFile(model: Model, filePath: string, destination
 
 let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
+let PROJECT_ROOT = '.'; 
 
 function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
+PROJECT_ROOT = path.resolve(__dirname, '..', '..');
   // Generate HTML header
   fileNode.append(`<!DOCTYPE html>
 <html lang="en">
@@ -123,28 +139,63 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   </html>`);
 }
 
+function loadTemplate(presentation: Presentation): TemplateContext | undefined {
+  console.log('[Template] Loading template...');
+  if (!presentation.template) return undefined;
+
+  const templateName = sanitizeLink(presentation.template);
+  const templateRoot = path.resolve(
+    PROJECT_ROOT,
+    'templates',
+    templateName
+  );
+
+  const templatePath = path.join(templateRoot, `${templateName}.sml`);
+
+  if (!fs.existsSync(templatePath)) {
+    console.warn(`Template '${templateName}' not found at ${templatePath}`);
+    return undefined;
+  }
+
+  const templateModel = parseTemplate(templatePath);
+
+  console.log('[Template] Requested template:', presentation.template);
+  console.log('[Template] Template path:', templatePath);
+
+  console.log('[Template] slots:', {
+    title: templateModel.titleTemplate?.elements.length,
+    body: templateModel.bodyTemplate?.elements.length
+  });
+
+  return {
+    titleElements: templateModel.titleTemplate?.elements,
+    bodyElements: templateModel.bodyTemplate?.elements,
+    style: templateModel.style
+  };
+}
+
 function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
-  // Generate title slide
-  let author = presentation.author ?? 'Anonymous';
-  if (author.startsWith('"') && author.endsWith('"')) {
-    author = author.substring(1, author.length - 1);
-  }
+  const templateCtx = loadTemplate(presentation);
+  // let author = presentation.author ?? 'Anonymous';
+  // if (author.startsWith('"') && author.endsWith('"')) {
+  //   author = author.substring(1, author.length - 1);
+  // }
 
-  let title = presentation.name;
-  if (title.startsWith('"') && title.endsWith('"')) {
-    title = title.substring(1, title.length - 1);
-  }
+  // let title = presentation.name;
+  // if (title.startsWith('"') && title.endsWith('"')) {
+  //   title = title.substring(1, title.length - 1);
+  // }
 
-  fileNode.append(`
-            <section>
-                <h1>${title}</h1>
-                <p>by ${author}</p>
-            </section>`);
+  // fileNode.append(`
+  //           <section>
+  //               <h1>${title}</h1>
+  //               <p>by ${author+"jess"}</p>
+  //           </section>`);
 
   // Generate content slides
-  for (const slide of presentation.slides) {
-    generateSlide(slide, fileNode);
-  }
+  presentation.slides.forEach((slide, index) => {
+    generateSlide(slide, index, templateCtx, fileNode);
+  });
 }
 
 type SlideMLTransition = { type: string; duration?: string } | undefined;
@@ -182,7 +233,12 @@ function mapDurationToRevealSpeed(duration: string | undefined): 'fast' | 'defau
   return duration;
 }
 
-function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
+function generateSlide(
+  slide: Slide,
+  index: number,
+  template: TemplateContext | undefined,
+  fileNode: CompositeGeneratorNode
+) {
   const normalizedTransition = slide.transition
     ? {
         type: slide.transition.type,
@@ -191,12 +247,35 @@ function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
     : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
-  fileNode.append(`<section style="width: 100%; height: 100%;"${transitionAttrs}>`);
+  const bg = template?.style?.backgroundColor;
+  const font = template?.style?.font;
+
+  const slideStyle = `
+    width: 100%;
+    height: 100%;
+    ${bg ? `background-color: ${bg};` : ''}
+    ${font?.name ? `font-family: ${font.name};` : ''}
+    ${font?.color ? `color: ${font.color};` : ''}
+    ${font?.size ? `font-size: ${font.size}px;` : ''}
+  `;
+
+  fileNode.append(`<section${transitionAttrs} style="${slideStyle}">`);
   // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
   fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
-  for (const element of slide.elements) {
-    generateElement(element, fileNode);
-  }
+
+  const templateElements =
+    index === 0
+      ? template?.titleElements
+      : template?.bodyElements;
+
+  templateElements?.forEach(el =>
+    generateElement(el, fileNode)
+  );
+
+  slide.elements.forEach(el =>
+    generateElement(el, fileNode)
+  );
+
   fileNode.append('</div>');
   fileNode.append('</section>');
 }

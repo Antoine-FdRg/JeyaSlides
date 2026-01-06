@@ -1,6 +1,4 @@
 ﻿presentation: 
-  name: "TestPresentation" 
-  author: "Emma"
   slides: 
     -slide: 
       elements: 

@@ -1,6 +1,4 @@
 presentation:
-  name: "Introduction à la Physique Quantique"
-  author: "Emma"
   slides:
     -slide:
       elements:

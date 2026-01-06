@@ -10,14 +10,19 @@ entry Model:
       presentation=Presentation
     );
 
+TemplateSlot:
+  'elements:'
+    ('-' elements+=Element)+
+;
 
 Template:
-  'template:' 
-    'name:' name=ID 
+  'template:'
+    'name:' name=ID
     (style=TemplateStyle)?
-    ('titleTemplate:' titleTemplate=Element)?
-    ('bodyTemplate:' bodyTemplate=Element)?
+    ('titleTemplate:' titleTemplate=TemplateSlot)?
+    ('bodyTemplate:' bodyTemplate=TemplateSlot)?
 ;
+
 
 TemplateStyle:
   'style:' 
@@ -28,8 +33,6 @@ TemplateStyle:
 
 Presentation:
   'presentation:' 
-    'name:' name=STRING 
-    ('author:' author=STRING)?
     ('displaySlideNumber:' displaySlideNumber=BOOLEAN)?
     ('template:' template=STRING)?
     "slides:" 
