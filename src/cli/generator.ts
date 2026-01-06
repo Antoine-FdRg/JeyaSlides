@@ -58,6 +58,16 @@ export function generateRevealJsFile(model: Model, filePath: string, destination
   return generatedFilePath;
 }
 
+/**
+ * Generate Reveal.js HTML as a string without writing to file (for preview)
+ */
+export function generateRevealJsString(model: Model, sourceDir: string): string {
+  const fileNode = new CompositeGeneratorNode();
+  // For preview, don't copy assets, just use paths as-is
+  generateRevealJs(model, fileNode, sourceDir, sourceDir);
+  return toString(fileNode);
+}
+
 let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
 let PROJECT_ROOT = '.'; 

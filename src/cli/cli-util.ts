@@ -41,6 +41,30 @@ export async function extractAstNode<T extends AstNode>(fileName: string, servic
   return (await extractDocument(fileName, services)).parseResult?.value as T;
 }
 
+/**
+ * Parse a document from its content string (for preview)
+ */
+export async function parseDocumentFromContent<T extends AstNode>(
+  filePath: string,
+  content: string,
+  services: LangiumServices,
+): Promise<T> {
+  const document = services.shared.workspace.LangiumDocuments.getOrCreateDocument(URI.file(path.resolve(filePath)));
+
+  // Update the document content
+  const textDocument = document.textDocument;
+  services.shared.workspace.TextDocuments.get(textDocument.uri);
+
+  // Create a new document with the content
+  const uri = URI.file(path.resolve(filePath));
+  const newDoc = services.shared.workspace.LangiumDocuments.getOrCreateDocument(uri);
+
+  // Build the document
+  await services.shared.workspace.DocumentBuilder.build([newDoc], { validationChecks: 'all' });
+
+  return newDoc.parseResult?.value as T;
+}
+
 interface FilePathData {
   destination: string;
   name: string;

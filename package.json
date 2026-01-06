@@ -20,6 +20,29 @@
             "language": "slide-ml",
             "scopeName": "source.slide-ml",
             "path": "./syntaxes/slide-ml.tmLanguage.json"
+        }],
+        "commands": [{
+            "command": "slide-ml.showPreview",
+            "title": "Open Preview",
+            "category": "SlideML",
+            "icon": "$(open-preview)"
+        }],
+        "menus": {
+            "editor/title": [{
+                "command": "slide-ml.showPreview",
+                "when": "editorLangId == slide-ml",
+                "group": "navigation"
+            }],
+            "commandPalette": [{
+                "command": "slide-ml.showPreview",
+                "when": "editorLangId == slide-ml"
+            }]
+        },
+        "keybindings": [{
+            "command": "slide-ml.showPreview",
+            "key": "ctrl+shift+v",
+            "mac": "cmd+shift+v",
+            "when": "editorLangId == slide-ml"
         }]
     },
     "activationEvents": [
