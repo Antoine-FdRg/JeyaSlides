@@ -1,5 +1,5 @@
 import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
-import { JeyaSlidesAstType } from './generated/ast';
+import { JeyaSlidesAstType, Template } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
 export function registerValidationChecks(services: SlideMLServices) {
@@ -7,7 +7,7 @@ export function registerValidationChecks(services: SlideMLServices) {
   const validator = services.validation.SlideMLValidator;
 
   const checks: ValidationChecks<AstTypeList<JeyaSlidesAstType>> = {
-    Template: validator.validate,
+    Template: validator.validateTemplate,
     Presentation: validator.validate,
     Slide: validator.validate,
     Element: validator.validate,
@@ -255,6 +255,21 @@ private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept:
         accept('warning', `La position est supérieure à 100, l'élément risque d'être invisible.`, { node });
         return;
       }
+    }
+  }
+
+  validateTemplate(node: AstNode, accept: ValidationAcceptor): void {
+    const template = node as Template;
+    const hasStyle = !!template.style;
+    const hasTitle = !!template.titleTemplate;
+    const hasBody = !!template.bodyTemplate;
+
+    if (!hasStyle && !hasTitle && !hasBody) {
+      accept(
+        'error',
+        'Un Template doit définir au moins un style, un templateTitle ou un templateBody.',
+        { node: template }
+      );
     }
   }
 }
