@@ -33,6 +33,8 @@ TemplateStyle:
 
 Presentation:
   'presentation:' 
+    ('name:' title=STRING)?
+    ('author:' author=STRING)?
     ('displaySlideNumber:' displaySlideNumber=BOOLEAN)?
     ('template:' template=STRING)?
     "slides:" 
