@@ -111,7 +111,7 @@ Quiz:
 
 PersonnalisedQuiz:
   '-info:'
-      'title:' title=STRING
+      'name:' title=STRING
       'description:' description=STRING
   '-questions:'
       (question+=Question)+
@@ -122,8 +122,8 @@ Question:
       'content:' content=STRING
       'options:'
           (option+=Option)+
-      'correctMessage:' correctMessage=STRING
-      'incorrectMessage:' incorrectMessage=STRING
+      ('correctMessage:' correctMessage=STRING)?
+      ('incorrectMessage:' incorrectMessage=STRING)?
 ;
 
 Option:

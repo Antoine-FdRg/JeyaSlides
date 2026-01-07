@@ -358,7 +358,6 @@ function escapeHtml(s: string): string {
 }
 
 function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
-  // Conteneur quiz (on ne met PAS tes DEFAULT_ELEMENT_STYLES ici, sinon ça casse l'iframe)
   fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
 
   if (quizNode.link) {
@@ -367,66 +366,89 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
     if (isRemoteLink(raw)) {
       const src = encodeURI(raw);
 
-      const joinUrl = (sanitizeStringLiteral((quizNode as any).joinUrl) || 'https://www.menti.com').trim();
-      const joinCode = (sanitizeStringLiteral((quizNode as any).joinCode) || '').trim();
+      const joinUrlRaw = sanitizeStringLiteral((quizNode as any).joinUrl);
+      const joinCodeRaw = sanitizeStringLiteral((quizNode as any).joinCode);
 
-      const qrTarget = joinCode ? `${joinUrl}?code=${encodeURIComponent(joinCode.replace(/\s+/g, ''))}` : joinUrl;
+      const joinUrl = (joinUrlRaw || '').trim();
+      const joinCode = (joinCodeRaw || '').trim();
+
+      const hasJoinInfo = !!joinUrl || !!joinCode;
+      const effectiveJoinUrl = (joinUrl || (joinCode ? 'https://www.menti.com' : '')).trim();
+
+      const qrTarget = joinCode
+        ? `${effectiveJoinUrl}?code=${encodeURIComponent(joinCode.replaceAll(/\s+/g, ''))}`
+        : effectiveJoinUrl;
 
       const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
 
       fileNode.append(`
-      <div class="quiz-layout"
-           onclick="event.stopPropagation()"
-           onmousedown="event.stopPropagation()"
-           onmouseup="event.stopPropagation()"
-           onwheel="event.stopPropagation()">
+        <div class="quiz-layout"
+             onclick="event.stopPropagation()"
+             onmousedown="event.stopPropagation()"
+             onmouseup="event.stopPropagation()"
+             onwheel="event.stopPropagation()">
 
-        <div class="quiz-main">
-          <iframe
-            src="${src}"
-            allowfullscreen
-            loading="lazy">
-          </iframe>
-        </div>
-      </div>
-      <div class="quiz-side">
-          <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
-            <div id="${qrId}"></div>
+          <div class="quiz-main">
+            <iframe
+              src="${src}"
+              allowfullscreen
+              loading="lazy">
+            </iframe>
           </div>
+
+          ${
+            hasJoinInfo
+              ? `
+          <div class="quiz-side">
+            <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
+              <div id="${qrId}"></div>
+            </div>
+          </div>
+              `
+              : ''
+          }
+
         </div>
-    `);
+      `);
 
       fileNode.append('</div>');
       return;
     }
   }
 
-  // --- Cas 2 : quiz inline (SlickQuiz)  ✅ GARDÉ
   if (quizNode.personnalisedQuiz) {
     const pq = quizNode.personnalisedQuiz;
 
     const title = sanitizeStringLiteral(pq.title);
     const description = sanitizeStringLiteral(pq.description);
 
-    const level1 = 'Jeopardy Ready';
-    const level2 = 'Jeopardy Contender';
-    const level3 = 'Jeopardy Amateur';
-    const level4 = 'Jeopardy Newb';
-    const level5 = 'Stay in school, kid...';
+    const level1 = "Plus rien n'a de secret pour toi !";
+    const level2 = 'Tu frôles la perfection !';
+    const level3 = 'Pas mal du tout !';
+    const level4 = 'Il va falloir réviser !';
+    const level5 = 'On ne peut pas être bon partout !';
 
     const questions = (pq.question ?? []).map((q) => {
       const content = sanitizeStringLiteral(q.content);
 
-      const answers = (q.option ?? []).map((opt) => ({
-        option: sanitizeStringLiteral(opt.answer),
-        correct: Boolean(opt.correct),
-      }));
+      const answers = (q.option ?? []).map((opt) => {
+        const isCorrect = opt.correct === 'true';
+        return {
+          option: sanitizeStringLiteral(opt.answer),
+          correct: isCorrect,
+        };
+      });
 
-      const correctMsg = sanitizeStringLiteral(q.correctMessage);
-      const incorrectMsg = sanitizeStringLiteral(q.incorrectMessage);
+      const correctMsgRaw = sanitizeStringLiteral((q as any).correctMessage);
+      const incorrectMsgRaw = sanitizeStringLiteral((q as any).incorrectMessage);
 
-      const correctHtml = `<p><span>That's right!</span> ${escapeHtml(correctMsg)}</p>`;
-      const incorrectHtml = `<p><span>Uhh no.</span> ${escapeHtml(incorrectMsg)}</p>`;
+      const correctMsg = correctMsgRaw && correctMsgRaw.trim().length > 0 ? correctMsgRaw : 'Bonne réponse ✅';
+
+      const incorrectMsg =
+        incorrectMsgRaw && incorrectMsgRaw.trim().length > 0 ? incorrectMsgRaw : 'Mauvaise réponse ❌';
+
+      const correctHtml = `<p><span>${escapeHtml(correctMsg)}</span></p>`;
+      const incorrectHtml = `<p><span>${escapeHtml(incorrectMsg)}</span></p>`;
 
       return {
         q: content,
@@ -449,8 +471,11 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
       questions,
     };
 
-    const jsonPretty = JSON.stringify(quizObject, null, 2).replace(/<\/script>/gi, '<\\/script>');
+    const jsonPretty = JSON.stringify(quizObject, null, 2).replaceAll(/<\/script>/gi, '<\\/script>');
+
+    fileNode.append(`<div class="quiz">`);
     fileNode.append(`<script data-quiz>\nquiz = ${jsonPretty};\n</script>`);
+    fileNode.append(`</div>`);
 
     fileNode.append('</div>');
     return;
