@@ -67,7 +67,7 @@ let PROJECT_ROOT = '.';
 function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
-PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+  PROJECT_ROOT = path.resolve(__dirname, '..', '..');
   // Generate HTML header
   fileNode.append(`<!DOCTYPE html>
 <html lang="en">
@@ -113,7 +113,7 @@ PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 .quiz-side{
   position: absolute;
   top: 0px;
-  right: -220px;
+  right: 2vw;
   z-index: 9999;
 
   width: auto;
@@ -250,11 +250,7 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
   if (!presentation.template) return undefined;
 
   const templateName = sanitizeLink(presentation.template);
-  const templateRoot = path.resolve(
-    PROJECT_ROOT,
-    'templates',
-    templateName
-  );
+  const templateRoot = path.resolve(PROJECT_ROOT, 'templates', templateName);
 
   const templatePath = path.join(templateRoot, `${templateName}.sml`);
 
@@ -270,15 +266,15 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
 
   console.log('[Template] slots:', {
     title: templateModel.titleTemplate?.elements.length,
-    body: templateModel.bodyTemplate?.elements.length
+    body: templateModel.bodyTemplate?.elements.length,
   });
 
-return {
-  titleElements: templateModel.titleTemplate?.elements,
-  bodyElements: templateModel.bodyTemplate?.elements,
-  backgroundColor: templateModel.defaults?.background?.color,
-  textDefaults: extractTextDefaults(templateModel)
-};
+  return {
+    titleElements: templateModel.titleTemplate?.elements,
+    bodyElements: templateModel.bodyTemplate?.elements,
+    backgroundColor: templateModel.defaults?.background?.color,
+    textDefaults: extractTextDefaults(templateModel),
+  };
 }
 
 function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
@@ -327,7 +323,7 @@ function generateSlide(
   slide: Slide,
   index: number,
   template: TemplateContext | undefined,
-  fileNode: CompositeGeneratorNode
+  fileNode: CompositeGeneratorNode,
 ) {
   const normalizedTransition = slide.transition
     ? {
@@ -349,29 +345,17 @@ function generateSlide(
   // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
   fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
 
-  const templateElements =
-    index === 0
-      ? template?.titleElements
-      : template?.bodyElements;
+  const templateElements = index === 0 ? template?.titleElements : template?.bodyElements;
 
-  templateElements?.forEach(el =>
-    generateElement(el, fileNode, template)
-  );
+  templateElements?.forEach((el) => generateElement(el, fileNode, template));
 
-  slide.elements.forEach(el =>
-    generateElement(el, fileNode, template)
-  );
+  slide.elements.forEach((el) => generateElement(el, fileNode, template));
 
   fileNode.append('</div>');
   fileNode.append('</section>');
 }
 
-function generateGroup(
-  group: Group,
-  fileNode: CompositeGeneratorNode,
-  styles: String[],
-  template?: TemplateContext
-) {
+function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
   const groupStyles = [...styles];
   const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
   if (!hasPosition) {
@@ -392,11 +376,7 @@ function generateGroup(
   fileNode.append('</div>');
 }
 
-function generateElement(
-  element: Element,
-  fileNode: CompositeGeneratorNode,
-  template?: TemplateContext
-) {
+function generateElement(element: Element, fileNode: CompositeGeneratorNode, template?: TemplateContext) {
   const styles: String[] = getElementStyles(element);
   styles.push(getElementPosition(element));
   if (isGroup(element)) return generateGroup(element, fileNode, styles, template);
@@ -565,7 +545,6 @@ function getElementPosition(element: Element): String {
   }
 }
 
-
 //Quiz helpers
 function sanitizeStringLiteral(s: string | undefined): string {
   if (s == null) return '';
@@ -622,16 +601,16 @@ function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
           </div>
 
           ${
-      hasJoinInfo
-        ? `
+            hasJoinInfo
+              ? `
           <div class="quiz-side">
             <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
               <div id="${qrId}"></div>
             </div>
           </div>
               `
-        : ''
-    }
+              : ''
+          }
 
         </div>
       `);
@@ -825,12 +804,7 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   );
 }
 
-function generateText(
-  text: Text,
-  fileNode: CompositeGeneratorNode,
-  styles: String[],
-  template?: TemplateContext
-) {
+function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
   fileNode.append('<div class="text"');
 
   if (isBasicText(text) && text.align) {
@@ -844,45 +818,30 @@ function generateText(
 
   if (isCode(text)) {
     // TODO
-  }
-  else if (isParagraph(text)) {
-    generateParagraph(
-      text,
-      fileNode,
-      text.style,
-      template
-    );
-  }
-  else if (isList(text)) {
+  } else if (isParagraph(text)) {
+    generateParagraph(text, fileNode, text.style, template);
+  } else if (isList(text)) {
     // TODO
-  }
-  else {
+  } else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
   fileNode.append('</div>');
 }
 
-
 function generateParagraph(
   paragraph: Paragraph,
   fileNode: CompositeGeneratorNode,
   elementStyle: any,
-  template?: TemplateContext
+  template?: TemplateContext,
 ) {
-  const tag =
-    paragraph.type === 'title' ? 'h1' :
-    paragraph.type === 'subtitle' ? 'h2' : 'p';
+  const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
 
-  const resolvedStyles = resolveTextStyles(
-    paragraph.type,
-    elementStyle,
-    template
-  );
+  const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
 
   fileNode.append(
     `<${tag} style="${DEFAULT_TEXT_STYLE}${resolvedStyles.join(' ')}">
       ${paragraph.content}
-     </${tag}>`
+     </${tag}>`,
   );
 }
