@@ -357,31 +357,29 @@ function escapeHtml(s: string): string {
     .replaceAll("'", '&#39;');
 }
 
-function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
-  fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
+function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
+  if (!quizNode.link) return;
+  const raw = sanitizeLink(quizNode.link);
+  if (!raw) return;
+  if (isRemoteLink(raw)) {
+    const src = encodeURI(raw);
 
-  if (quizNode.link) {
-    const raw = sanitizeLink(quizNode.link);
+    const joinUrlRaw = sanitizeStringLiteral((quizNode as any).joinUrl);
+    const joinCodeRaw = sanitizeStringLiteral((quizNode as any).joinCode);
 
-    if (isRemoteLink(raw)) {
-      const src = encodeURI(raw);
+    const joinUrl = (joinUrlRaw || '').trim();
+    const joinCode = (joinCodeRaw || '').trim();
 
-      const joinUrlRaw = sanitizeStringLiteral((quizNode as any).joinUrl);
-      const joinCodeRaw = sanitizeStringLiteral((quizNode as any).joinCode);
+    const hasJoinInfo = !!joinUrl || !!joinCode;
+    const effectiveJoinUrl = (joinUrl || (joinCode ? 'https://www.menti.com' : '')).trim();
 
-      const joinUrl = (joinUrlRaw || '').trim();
-      const joinCode = (joinCodeRaw || '').trim();
+    const qrTarget = joinCode
+      ? `${effectiveJoinUrl}?code=${encodeURIComponent(joinCode.replaceAll(/\s+/g, ''))}`
+      : effectiveJoinUrl;
 
-      const hasJoinInfo = !!joinUrl || !!joinCode;
-      const effectiveJoinUrl = (joinUrl || (joinCode ? 'https://www.menti.com' : '')).trim();
+    const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
 
-      const qrTarget = joinCode
-        ? `${effectiveJoinUrl}?code=${encodeURIComponent(joinCode.replaceAll(/\s+/g, ''))}`
-        : effectiveJoinUrl;
-
-      const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
-
-      fileNode.append(`
+    fileNode.append(`
         <div class="quiz-layout"
              onclick="event.stopPropagation()"
              onmousedown="event.stopPropagation()"
@@ -411,73 +409,85 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
         </div>
       `);
 
-      fileNode.append('</div>');
-      return;
-    }
+    fileNode.append('</div>');
   }
+}
 
-  if (quizNode.personnalisedQuiz) {
-    const pq = quizNode.personnalisedQuiz;
+function displayPersonnalisedQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
+  const pq = quizNode.personnalisedQuiz;
 
-    const title = sanitizeStringLiteral(pq.title);
-    const description = sanitizeStringLiteral(pq.description);
+  if (!pq) return;
 
-    const level1 = "Plus rien n'a de secret pour toi !";
-    const level2 = 'Tu frôles la perfection !';
-    const level3 = 'Pas mal du tout !';
-    const level4 = 'Il va falloir réviser !';
-    const level5 = 'On ne peut pas être bon partout !';
+  const title = sanitizeStringLiteral(pq.title);
+  const description = sanitizeStringLiteral(pq.description);
 
-    const questions = (pq.question ?? []).map((q) => {
-      const content = sanitizeStringLiteral(q.content);
+  const level1 = "Plus rien n'a de secret pour toi !";
+  const level2 = 'Tu frôles la perfection !';
+  const level3 = 'Pas mal du tout !';
+  const level4 = 'Il va falloir réviser !';
+  const level5 = 'On ne peut pas être bon partout !';
 
-      const answers = (q.option ?? []).map((opt) => {
-        const isCorrect = opt.correct === 'true';
-        return {
-          option: sanitizeStringLiteral(opt.answer),
-          correct: isCorrect,
-        };
-      });
+  const questions = (pq.question ?? []).map((q) => {
+    const content = sanitizeStringLiteral(q.content);
 
-      const correctMsgRaw = sanitizeStringLiteral((q as any).correctMessage);
-      const incorrectMsgRaw = sanitizeStringLiteral((q as any).incorrectMessage);
-
-      const correctMsg = correctMsgRaw && correctMsgRaw.trim().length > 0 ? correctMsgRaw : 'Bonne réponse ✅';
-
-      const incorrectMsg =
-        incorrectMsgRaw && incorrectMsgRaw.trim().length > 0 ? incorrectMsgRaw : 'Mauvaise réponse ❌';
-
-      const correctHtml = `<p><span>${escapeHtml(correctMsg)}</span></p>`;
-      const incorrectHtml = `<p><span>${escapeHtml(incorrectMsg)}</span></p>`;
-
+    const answers = (q.option ?? []).map((opt) => {
+      const isCorrect = opt.correct === 'true';
       return {
-        q: content,
-        a: answers,
-        correct: correctHtml,
-        incorrect: incorrectHtml,
+        option: sanitizeStringLiteral(opt.answer),
+        correct: isCorrect,
       };
     });
 
-    const quizObject = {
-      info: {
-        name: title,
-        main: description,
-        level1,
-        level2,
-        level3,
-        level4,
-        level5,
-      },
-      questions,
+    const correctMsgRaw = sanitizeStringLiteral((q as any).correctMessage);
+    const incorrectMsgRaw = sanitizeStringLiteral((q as any).incorrectMessage);
+
+    const correctMsg = correctMsgRaw && correctMsgRaw.trim().length > 0 ? correctMsgRaw : 'Bonne réponse ✅';
+
+    const incorrectMsg = incorrectMsgRaw && incorrectMsgRaw.trim().length > 0 ? incorrectMsgRaw : 'Mauvaise réponse ❌';
+
+    const correctHtml = `<p><span>${escapeHtml(correctMsg)}</span></p>`;
+    const incorrectHtml = `<p><span>${escapeHtml(incorrectMsg)}</span></p>`;
+
+    return {
+      q: content,
+      a: answers,
+      correct: correctHtml,
+      incorrect: incorrectHtml,
     };
+  });
 
-    const jsonPretty = JSON.stringify(quizObject, null, 2).replaceAll(/<\/script>/gi, '<\\/script>');
+  const quizObject = {
+    info: {
+      name: title,
+      main: description,
+      level1,
+      level2,
+      level3,
+      level4,
+      level5,
+    },
+    questions,
+  };
 
-    fileNode.append(`<div class="quiz">`);
-    fileNode.append(`<script data-quiz>\nquiz = ${jsonPretty};\n</script>`);
-    fileNode.append(`</div>`);
+  const jsonPretty = JSON.stringify(quizObject, null, 2).replaceAll(/<\/script>/gi, '<\\/script>');
 
-    fileNode.append('</div>');
+  fileNode.append(`<div class="quiz">`);
+  fileNode.append(`<script data-quiz>\nquiz = ${jsonPretty};\n</script>`);
+  fileNode.append(`</div>`);
+
+  fileNode.append('</div>');
+}
+
+function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
+  fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
+
+  if (quizNode.link) {
+    displayOnlineQuiz(quizNode, fileNode);
+    return;
+  }
+
+  if (quizNode.personnalisedQuiz) {
+    displayPersonnalisedQuiz(quizNode, fileNode);
     return;
   }
 
@@ -486,7 +496,7 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
 }
 
 function sanitizeLink(link: string) {
-  if (!link) return link;
+  if (!link) return '';
   if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
   if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
   return link;
