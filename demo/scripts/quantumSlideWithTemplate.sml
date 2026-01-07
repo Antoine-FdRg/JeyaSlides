@@ -1,12 +1,24 @@
 presentation:
-  name: "Introduction to Quantum Physics"
-  author: "Dr. Jane Doe"
+  template: "upgradedQuantikTemplate"
+
   slides:
     -slide:
       elements:
         -title:
-          content: "Quantum Physics in the 21st Century"
-          align: center
+            content: "Introduction to Quantum Physics"
+            align: center
+        -subtitle:
+            content: "(made easy!)"
+            align: center
+        -text:
+            content: "Quantik"
+            align: center
+
+    -slide:
+      elements:
+        -title:
+            content: "Quantum Physics in the 21st Century"
+            align: center
 
     -slide:
       elements:
@@ -15,12 +27,14 @@ presentation:
             -text:
               content: "What is Superposition?"
               align: center
-          style: 
-            size:
-              width: 80
             -text:
               content: "A quantum system can exist in multiple states at once."
               align: center
+              style:
+                font:
+                  name: "Playfair Display"
+                  color: #c2ce13
+
             -group:
               elements:
                 -text:

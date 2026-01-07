@@ -1,6 +1,6 @@
 ﻿presentation: 
-  name: "TestPresentation" 
-  author: "Emma"
+  name: "testSimpleWAuthor"
+  author: "antoin"
   slides: 
     -slide: 
       elements: 

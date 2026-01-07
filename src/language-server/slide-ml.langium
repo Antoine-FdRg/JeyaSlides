@@ -10,25 +10,47 @@ entry Model:
       presentation=Presentation
     );
 
+TemplateSlot:
+  'elements:'
+    ('-' elements+=Element)+
+;
 
 Template:
-  'template:' 
-    'name:' name=ID 
-    (style=TemplateStyle)?
-    ('titleTemplate:' titleTemplate=Element)?
-    ('bodyTemplate:' bodyTemplate=Element)?
+  'template:'
+    'name:' name=ID
+    (defaults=TemplateDefaults)?
+    ('titleTemplate:' titleTemplate=TemplateSlot)?
+    ('bodyTemplate:' bodyTemplate=TemplateSlot)?
 ;
 
-TemplateStyle:
-  'style:' 
-    ('backgroundColor:' backgroundColor=COLOR)?
-    (font=Font)?
-    (transition=Transition)?
+TemplateDefaults:
+  'defaults:'
+    (background=TemplateBackground)?
+    (textStyles=TemplateTextStyles)?
 ;
+
+TemplateBackground:
+  'background:'
+    'color:' color=ColorValue
+;
+
+TemplateTextStyles:
+  'textStyles:'
+    (entries+=TemplateTextStyleEntry)+
+;
+
+TemplateTextStyleEntry:
+  key=TextStyleKey ':'
+    ('align:' align=TextAlignment)?
+    (font=Font)?
+;
+
+TextStyleKey returns string:
+  'title' | 'subtitle' | 'text';
 
 Presentation:
   'presentation:' 
-    'name:' name=STRING 
+    ('name:' name=STRING)?
     ('author:' author=STRING)?
     ('displaySlideNumber:' displaySlideNumber=BOOLEAN)?
     ('template:' template=STRING)?
@@ -69,7 +91,7 @@ Code:
   'content:' content=STRING;
 
 BasicText:
-  (Paragraph | List) ('align:' TextAlignment)?;
+  (Paragraph | List) ('align:' align=TextAlignment)?;
 
 Paragraph:
   type=TextType  ':' 
@@ -80,7 +102,8 @@ List:
     ('ordered:' ordered=BOOLEAN)? 
     'items:' 
       '-'items+=STRING 
-      ('-' items+=STRING)*;
+      ('-' items+=STRING)*
+;
 
 Image:
   'image:'
@@ -134,7 +157,7 @@ Option:
 Style:
   'style:'
     (size=Size)?
-    ('backgroundColor:' backgroundColor=COLOR)?
+    ('backgroundColor:' backgroundColor=ColorValue)?
     (font=Font)?
     ('rotation:' rotation=NUMBER)?
 ;
@@ -153,7 +176,7 @@ Font:
   'font:'
     ('name:' name=STRING)?
     ('size:' size=NUMBER)?
-    ('color:' color=COLOR)?
+    ('color:' color=ColorValue)?
     ('transformations:'
       '-'transformations+=FontTransformation 
       ('-' transformations+=FontTransformation)* )?
@@ -184,8 +207,10 @@ EnumXPosition returns string:
 EnumYPosition returns string:
   'top' | 'center' | 'bottom';
 EnumZPosition returns string:
-  'front' | 'behind';
+  'front' | 'back';
 
+
+terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
 
 Animation:
   "animation:"  
@@ -193,26 +218,29 @@ Animation:
     ComplexAnimation?;
 
 ComplexAnimation:
-  'type:' animationType=AnimationType 
-      ('duration:' duration=NUMBER)?;
+  'type:' animationType=EffectToken
+  ('duration:' duration=NUMBER)?;
 
-terminal AnimationType: 'fade-in' | 'zoom-in';
 
 Transition:
   'transition:' 
-    'type:' type=TransitionType 
-    ('duration:' duration=NUMBER)?;
-
-terminal TransitionType: 'slide-left' | 'slide-top';
-
+    'type:' type=EffectToken 
+    ('duration:' duration=DurationType)?;
 
 TextAlignment returns string:
   'left' | 'center' | 'right' | 'justify';
 TextType returns string:
   'title' | 'subtitle' | 'text';
 
+DurationType returns string:
+  'fast' | 'default' | 'slow';
 
-terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+ColorValue returns string:
+    HexColor | STRING
+;
+
+terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+
 terminal BOOLEAN: /true|false/;
 terminal NUMBER: /-?\d+(\.\d+)?/;
 terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;

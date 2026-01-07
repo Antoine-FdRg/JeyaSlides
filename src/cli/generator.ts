@@ -18,13 +18,23 @@ import {
   isImage,
   Video,
   isVideo,
+  XPosition,
+  YPosition,
+  ZPosition,
+  isCoordinatePosition,
+  isBasicText,
   isQuiz,
   Quiz,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
+import { parseTemplate } from './template-parser';
+import { extractTextDefaults, resolveTextStyles } from './template-utils';
+import { TemplateContext } from './template-types';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
 const DEFAULT_TEXT_STYLE = 'margin: 0;';
+const ZINDEX_BACK_VALUE = -10;
+const ZINDEX_FRONT_VALUE = 100;
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
   const data = extractDestinationAndName(filePath, destination);
@@ -40,12 +50,24 @@ export function generateRevealJsFile(model: Model, filePath: string, destination
   return generatedFilePath;
 }
 
+/**
+ * Generate Reveal.js HTML as a string without writing to file (for preview)
+ */
+export function generateRevealJsString(model: Model, sourceDir: string): string {
+  const fileNode = new CompositeGeneratorNode();
+  // For preview, don't copy assets, just use paths as-is
+  generateRevealJs(model, fileNode, sourceDir, sourceDir);
+  return toString(fileNode);
+}
+
 let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
+let PROJECT_ROOT = '.';
 
 function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
+PROJECT_ROOT = path.resolve(__dirname, '..', '..');
   // Generate HTML header
   fileNode.append(`<!DOCTYPE html>
 <html lang="en">
@@ -138,7 +160,6 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   fileNode.append(`
         </div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
     <script>
       // Open an image in a fullscreen overlay. Accepts an HTMLImageElement or a URL string.
@@ -168,7 +189,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
       }
     <\/script>
     <script>
-        Reveal.initialize([{
+        Reveal.initialize({
             hash: true,
             center: true,
             transition: 'slide',
@@ -176,8 +197,8 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
             maxScale: 2.0,
             disableLayout: true,
             slideNumber: ${presentation.displaySlideNumber ?? false}
-        
-  }]);
+        });
+
     <\/script>
     <script src="../plugin/quiz/js/jquery.min.js"></script>
     <script src="../plugin/quiz/js/slickQuiz.js"></script>
@@ -224,59 +245,162 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   </html>`);
 }
 
-function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
-  // Generate title slide
-  let author = presentation.author ?? 'Anonymous';
-  if (author.startsWith('"') && author.endsWith('"')) {
-    author = author.substring(1, author.length - 1);
+function loadTemplate(presentation: Presentation): TemplateContext | undefined {
+  console.log('[Template] Loading template...');
+  if (!presentation.template) return undefined;
+
+  const templateName = sanitizeLink(presentation.template);
+  const templateRoot = path.resolve(
+    PROJECT_ROOT,
+    'templates',
+    templateName
+  );
+
+  const templatePath = path.join(templateRoot, `${templateName}.sml`);
+
+  if (!fs.existsSync(templatePath)) {
+    console.warn(`Template '${templateName}' not found at ${templatePath}`);
+    return undefined;
   }
 
-  let title = presentation.name;
-  if (title.startsWith('"') && title.endsWith('"')) {
-    title = title.substring(1, title.length - 1);
-  }
+  const templateModel = parseTemplate(templatePath);
 
-  fileNode.append(`
-            <section>
-                <h1>${title}</h1>
-                <p>by ${author}</p>
-            </section>`);
+  console.log('[Template] Requested template:', presentation.template);
+  console.log('[Template] Template path:', templatePath);
 
-  // Generate content slides
-  for (const slide of presentation.slides) {
-    generateSlide(slide, fileNode);
-  }
+  console.log('[Template] slots:', {
+    title: templateModel.titleTemplate?.elements.length,
+    body: templateModel.bodyTemplate?.elements.length
+  });
+
+return {
+  titleElements: templateModel.titleTemplate?.elements,
+  bodyElements: templateModel.bodyTemplate?.elements,
+  backgroundColor: templateModel.defaults?.background?.color,
+  textDefaults: extractTextDefaults(templateModel)
+};
 }
 
-function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
-  const hasQuiz = slide.elements.some((e) => isQuiz(e));
-  fileNode.append(`<section class="${hasQuiz ? 'has-quiz' : ''}" style="width: 100%; height: 100%;">`);
-  for (const element of slide.elements) {
-    generateElement(element, fileNode);
+function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
+  const templateCtx = loadTemplate(presentation);
+  presentation.slides.forEach((slide, index) => {
+    generateSlide(slide, index, templateCtx, fileNode);
+  });
+}
+
+type SlideMLTransition = { type: string; duration?: string } | undefined;
+
+function getRevealTransitionAttributes(transition: SlideMLTransition): string {
+  if (!transition) return '';
+
+  const revealTransition = normalizeRevealTransitionValue(transition.type);
+  const speedAttr = mapDurationToRevealSpeed(transition.duration);
+
+  const attrs: string[] = [];
+  if (revealTransition) attrs.push(`data-transition="${revealTransition}"`);
+  if (speedAttr) attrs.push(`data-transition-speed="${speedAttr}"`);
+
+  return attrs.length ? ' ' + attrs.join(' ') : '';
+}
+
+function normalizeRevealTransitionValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const cleaned = value.trim().replaceAll(/\s+/g, ' ');
+  const base = '(none|fade|slide|convex|concave|zoom)';
+  const single = new RegExp(`^${base}(-in|-out)?$`);
+
+  if (single.test(cleaned)) return cleaned;
+
+  return undefined;
+}
+
+function mapDurationToRevealSpeed(duration: string | undefined): 'fast' | 'default' | 'slow' {
+  if (duration === undefined) return 'default';
+  if (duration !== 'fast' && duration !== 'default' && duration !== 'slow') {
+    return 'default';
   }
+  return duration;
+}
+
+function generateSlide(
+  slide: Slide,
+  index: number,
+  template: TemplateContext | undefined,
+  fileNode: CompositeGeneratorNode
+) {
+  const normalizedTransition = slide.transition
+    ? {
+        type: slide.transition.type,
+        duration: slide.transition.duration ? slide.transition.duration : 'default',
+      }
+    : undefined;
+  const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
+
+  const bg = template?.backgroundColor;
+
+  const slideStyle = `
+    width: 100%;
+    height: 100%;
+    ${bg ? `background-color: ${bg};` : ''}
+  `;
+  const hasQuiz = slide.elements.some((e) => isQuiz(e));
+  fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
+  // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
+  fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
+
+  const templateElements =
+    index === 0
+      ? template?.titleElements
+      : template?.bodyElements;
+
+  templateElements?.forEach(el =>
+    generateElement(el, fileNode, template)
+  );
+
+  slide.elements.forEach(el =>
+    generateElement(el, fileNode, template)
+  );
+
+  fileNode.append('</div>');
   fileNode.append('</section>');
 }
 
-function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateGroup(
+  group: Group,
+  fileNode: CompositeGeneratorNode,
+  styles: String[],
+  template?: TemplateContext
+) {
+  const groupStyles = [...styles];
+  const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
+  if (!hasPosition) {
+    groupStyles.unshift('position: relative;'); // position relative si le groupe n'a pas de position définie
+  }
+
   fileNode.append('<div class="group"');
-  if (styles.length > 0) {
-    fileNode.append(` style="${styles.join(' ')}"`);
+  if (groupStyles.length > 0) {
+    fileNode.append(` style="${groupStyles.join(' ')}"`);
   }
   fileNode.append('>');
-  // applyPosition(group.position); TODO
   // applyAnimation(group.animation); TODO
 
   for (const child of group.elements) {
-    generateElement(child, fileNode);
+    generateElement(child, fileNode, template);
   }
 
   fileNode.append('</div>');
 }
 
-function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
+function generateElement(
+  element: Element,
+  fileNode: CompositeGeneratorNode,
+  template?: TemplateContext
+) {
   const styles: String[] = getElementStyles(element);
-  if (isGroup(element)) return generateGroup(element, fileNode, styles);
-  if (isText(element)) return generateText(element, fileNode, styles);
+  styles.push(getElementPosition(element));
+  if (isGroup(element)) return generateGroup(element, fileNode, styles, template);
+  if (isText(element)) return generateText(element, fileNode, styles, template);
   if (isImage(element)) return generateImage(element, fileNode, styles);
   if (isVideo(element)) return generateVideo(element, fileNode, styles);
   if (isQuiz(element)) return generateQuiz(element, fileNode, styles);
@@ -339,6 +463,109 @@ function getElementStyles(element: Element): String[] {
   }
 }
 
+function getElementPosition(element: Element): String {
+  if (!element.position) return '';
+  let positionStyles: String[] = [];
+  let transformStyles: String[] = [];
+  getXPosition(element.position.x, positionStyles, transformStyles);
+  getYPosition(element.position.y, positionStyles, transformStyles);
+  getZPosition(element.position.z, positionStyles);
+
+  if (positionStyles.length > 0) {
+    positionStyles.unshift('position: absolute;'); // position absolute si une position est définie pour positionner par rapport au conteneur parent
+  }
+
+  if (transformStyles.length > 0) {
+    positionStyles.push(`transform: ${transformStyles.join(' ')};`);
+  }
+  return positionStyles.join(' ');
+
+  /**
+   * Ajoute les styles de positionnement horizontal à la liste des styles et de transformation
+   * @param x la position horizontale
+   * @param styles la liste des styles
+   * @param transformStyles la liste des styles de transformation
+   */
+  function getXPosition(x: XPosition | undefined, styles: String[], transformStyles: String[]) {
+    if (!x) return;
+    if (isCoordinatePosition(x)) {
+      if (x.value !== undefined) {
+        styles.push(`left: ${x.value}%;`);
+        transformStyles.push('translateX(-50%)');
+      }
+    } else {
+      const value = (x as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'left':
+          styles.push('left: 2%;');
+          break;
+        case 'center':
+          styles.push('left: 50%;');
+          transformStyles.push('translateX(-50%)');
+          break;
+        case 'right':
+          styles.push('right: 2%;');
+          break;
+      }
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement vertical à la liste des styles et de transformation
+   * @param y la position verticale
+   * @param styles la liste des styles
+   * @param transformStyles la liste des styles de transformation
+   */
+  function getYPosition(y: YPosition | undefined, styles: String[], transformStyles: String[]) {
+    if (!y) return;
+    if (isCoordinatePosition(y)) {
+      if (y.value !== undefined) {
+        styles.push(`top: ${y.value}%;`);
+        transformStyles.push('translateY(-50%)');
+      }
+    } else {
+      const value = (y as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'top':
+          styles.push('top: 2%;');
+          break;
+        case 'center':
+          styles.push('top: 50%;');
+          transformStyles.push('translateY(-50%)');
+          break;
+        case 'bottom':
+          styles.push('bottom: 2%;');
+          break;
+      }
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement en Z à la liste des styles
+   * @param z la position en Z
+   * @param styles la liste des styles
+   */
+  function getZPosition(z: ZPosition | undefined, styles: String[]) {
+    if (!z) return;
+    if (isCoordinatePosition(z)) {
+      if (z.value !== undefined) {
+        styles.push(`z-index: ${z.value};`);
+      }
+    } else {
+      const value = (z as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'front':
+          styles.push(`z-index:${ZINDEX_FRONT_VALUE};`);
+          break;
+        case 'back':
+          styles.push(`z-index: ${ZINDEX_BACK_VALUE};`);
+          break;
+      }
+    }
+  }
+}
+
+
 //Quiz helpers
 function sanitizeStringLiteral(s: string | undefined): string {
   if (s == null) return '';
@@ -395,16 +622,16 @@ function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
           </div>
 
           ${
-            hasJoinInfo
-              ? `
+      hasJoinInfo
+        ? `
           <div class="quiz-side">
             <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
               <div id="${qrId}"></div>
             </div>
           </div>
               `
-              : ''
-          }
+        : ''
+    }
 
         </div>
       `);
@@ -494,7 +721,6 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
   fileNode.append('<!-- Quiz node: no link and no personalisedQuiz -->');
   fileNode.append('</div>');
 }
-
 function sanitizeLink(link: string) {
   if (!link) return '';
   if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
@@ -599,41 +825,64 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   );
 }
 
-function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateText(
+  text: Text,
+  fileNode: CompositeGeneratorNode,
+  styles: String[],
+  template?: TemplateContext
+) {
   fileNode.append('<div class="text"');
+
+  if (isBasicText(text) && text.align) {
+    styles.push(`display:flex; justify-content:${text.align};`);
+  }
+
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }
   fileNode.append('>');
 
   if (isCode(text)) {
-    // generateCode(text, fileNode); TODO
-  } else if (isParagraph(text)) {
-    generateParagraph(text, fileNode);
-  } else if (isList(text)) {
-    // generateList(text, fileNode); TODO
-  } else {
+    // TODO
+  }
+  else if (isParagraph(text)) {
+    generateParagraph(
+      text,
+      fileNode,
+      text.style,
+      template
+    );
+  }
+  else if (isList(text)) {
+    // TODO
+  }
+  else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
   fileNode.append('</div>');
 }
 
-function generateParagraph(paragraph: Paragraph, fileNode: CompositeGeneratorNode) {
-  switch (paragraph.type) {
-    case 'title':
-      fileNode.append(`<h1 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h1>`);
-      break;
 
-    case 'subtitle':
-      fileNode.append(`<h2 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h2>`);
-      break;
+function generateParagraph(
+  paragraph: Paragraph,
+  fileNode: CompositeGeneratorNode,
+  elementStyle: any,
+  template?: TemplateContext
+) {
+  const tag =
+    paragraph.type === 'title' ? 'h1' :
+    paragraph.type === 'subtitle' ? 'h2' : 'p';
 
-    case 'text':
-      fileNode.append(`<p style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</p>`);
-      break;
+  const resolvedStyles = resolveTextStyles(
+    paragraph.type,
+    elementStyle,
+    template
+  );
 
-    default:
-      throw new Error(`Unknown paragraph type: ${paragraph.type}`);
-  }
+  fileNode.append(
+    `<${tag} style="${DEFAULT_TEXT_STYLE}${resolvedStyles.join(' ')}">
+      ${paragraph.content}
+     </${tag}>`
+  );
 }
