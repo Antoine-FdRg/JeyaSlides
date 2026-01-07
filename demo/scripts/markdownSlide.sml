@@ -19,4 +19,42 @@ presentation:
               width: 10
             font:
               size: 32
+    -slide: 
+      elements: 
+        - title:
+          content: "Liste à puces"
+        -list: 
+          ordered:false
+          items:
+            -"coucou"
+            -"salut"
+            -"hello"
+    -slide: 
+      elements: 
+        - title:
+          content: "Liste numérotée"
+        -list: 
+          ordered: true
+          items:
+            -"Bonjour"
+            -"Comment ça va ?"
+            -"Tu t'appelles comment ?"
+    -slide:
+      elements:
+        -title:
+          content: "liste numérotée avec style"
+        -list:
+          ordered:true
+          items:
+            -"**Bonjour**"
+            -"*Comment ça va ?*"
+            -"__Très bien__"
+          style:
+            font:
+              size: 40
+              color: "#ff8800"
+            rotation: 2
+
+
+          
 
