@@ -23,6 +23,8 @@ import {
   ZPosition,
   isCoordinatePosition,
   isBasicText,
+  isQuiz,
+  Quiz,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -60,12 +62,12 @@ export function generateRevealJsString(model: Model, sourceDir: string): string 
 
 let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
-let PROJECT_ROOT = '.'; 
+let PROJECT_ROOT = '.';
 
 function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
-PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+  PROJECT_ROOT = path.resolve(__dirname, '..', '..');
   // Generate HTML header
   fileNode.append(`<!DOCTYPE html>
 <html lang="en">
@@ -75,10 +77,73 @@ PROJECT_ROOT = path.resolve(__dirname, '..', '..');
     <title>Presentation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
+  body { font-family: Arial, sans-serif; }
+
+/* centre uniquement la slide qui contient un quiz */
+.has-quiz{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* conteneur (iframe + overlay) */
+.quiz-layout{
+  height: 90vh;
+  position: relative;
+  display: block;
+  margin: 0; /* centré par .has-quiz, pas par margin auto */
+}
+
+/* iframe */
+.quiz-main{
+  width: 100%;
+  height: 100%;
+}
+
+.quiz-main iframe{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* QR overlay */
+.quiz-side{
+  position: absolute;
+  top: 0px;
+  right: 2vw;
+  z-index: 9999;
+
+  width: auto;
+  height: auto;
+
+  background: rgba(20,20,20,0.92);
+  color: #fff;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 14px 14px;
+  border-radius: 12px;
+  
+}
+
+.quiz-side .qr{
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+@media (max-width: 1100px){
+  .quiz-side{ display:none; }
+}
+
+
+
     </style>
 </head>
 <body>
@@ -135,6 +200,47 @@ PROJECT_ROOT = path.resolve(__dirname, '..', '..');
         });
 
     <\/script>
+    <script src="../plugin/quiz/js/jquery.min.js"></script>
+    <script src="../plugin/quiz/js/slickQuiz.js"></script>
+    <script src="../plugin/quiz/js/quiz.js"></script>
+<script>
+  Reveal.on('ready', function () {
+    prepareQuizzes({});
+  });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  function renderQuizQRCodes(scope) {
+    if (typeof QRCode !== 'function') return;
+
+    const root = scope || document;
+    root.querySelectorAll('[data-qr-target]').forEach((box) => {
+      const target = box.getAttribute('data-qr-target');
+      const id = box.getAttribute('data-qr-id');
+      if (!id || !target) return;
+
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      if (el.getAttribute('data-qr-done') === '1') return;
+
+      el.innerHTML = '';
+      new QRCode(el, { text: target, width: 140, height: 140 });
+      el.setAttribute('data-qr-done', '1');
+    });
+  }
+
+  Reveal.on('ready', function () {
+    renderQuizQRCodes(document);
+  });
+
+  Reveal.on('slidechanged', function (event) {
+    // ne rend que la slide courante
+    renderQuizQRCodes(event.currentSlide);
+  });
+</script>
+
+
   </body>
   </html>`);
 }
@@ -144,11 +250,7 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
   if (!presentation.template) return undefined;
 
   const templateName = sanitizeLink(presentation.template);
-  const templateRoot = path.resolve(
-    PROJECT_ROOT,
-    'templates',
-    templateName
-  );
+  const templateRoot = path.resolve(PROJECT_ROOT, 'templates', templateName);
 
   const templatePath = path.join(templateRoot, `${templateName}.sml`);
 
@@ -164,15 +266,15 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
 
   console.log('[Template] slots:', {
     title: templateModel.titleTemplate?.elements.length,
-    body: templateModel.bodyTemplate?.elements.length
+    body: templateModel.bodyTemplate?.elements.length,
   });
 
-return {
-  titleElements: templateModel.titleTemplate?.elements,
-  bodyElements: templateModel.bodyTemplate?.elements,
-  backgroundColor: templateModel.defaults?.background?.color,
-  textDefaults: extractTextDefaults(templateModel)
-};
+  return {
+    titleElements: templateModel.titleTemplate?.elements,
+    bodyElements: templateModel.bodyTemplate?.elements,
+    backgroundColor: templateModel.defaults?.background?.color,
+    textDefaults: extractTextDefaults(templateModel),
+  };
 }
 
 function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
@@ -221,7 +323,7 @@ function generateSlide(
   slide: Slide,
   index: number,
   template: TemplateContext | undefined,
-  fileNode: CompositeGeneratorNode
+  fileNode: CompositeGeneratorNode,
 ) {
   const normalizedTransition = slide.transition
     ? {
@@ -238,34 +340,22 @@ function generateSlide(
     height: 100%;
     ${bg ? `background-color: ${bg};` : ''}
   `;
-
-  fileNode.append(`<section${transitionAttrs} style="${slideStyle}">`);
+  const hasQuiz = slide.elements.some((e) => isQuiz(e));
+  fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
   // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
   fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
 
-  const templateElements =
-    index === 0
-      ? template?.titleElements
-      : template?.bodyElements;
+  const templateElements = index === 0 ? template?.titleElements : template?.bodyElements;
 
-  templateElements?.forEach(el =>
-    generateElement(el, fileNode, template)
-  );
+  templateElements?.forEach((el) => generateElement(el, fileNode, template));
 
-  slide.elements.forEach(el =>
-    generateElement(el, fileNode, template)
-  );
+  slide.elements.forEach((el) => generateElement(el, fileNode, template));
 
   fileNode.append('</div>');
   fileNode.append('</section>');
 }
 
-function generateGroup(
-  group: Group, 
-  fileNode: CompositeGeneratorNode,
-  styles: String[],
-  template?: TemplateContext
-) {
+function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
   const groupStyles = [...styles];
   const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
   if (!hasPosition) {
@@ -286,19 +376,15 @@ function generateGroup(
   fileNode.append('</div>');
 }
 
-function generateElement(
-  element: Element,
-  fileNode: CompositeGeneratorNode,
-  template?: TemplateContext
-) {
+function generateElement(element: Element, fileNode: CompositeGeneratorNode, template?: TemplateContext) {
   const styles: String[] = getElementStyles(element);
   styles.push(getElementPosition(element));
   if (isGroup(element)) return generateGroup(element, fileNode, styles, template);
   if (isText(element)) return generateText(element, fileNode, styles, template);
   if (isImage(element)) return generateImage(element, fileNode, styles);
   if (isVideo(element)) return generateVideo(element, fileNode, styles);
-  // if (isQuiz(element)) return generateQuiz(element, fileNode, styles); TODO
-  throw new Error(`Unhandled element type: ${element.$type}`);
+  if (isQuiz(element)) return generateQuiz(element, fileNode, styles);
+  throw new Error(`Unhandled element type: ${(element as Element).$type}`);
 }
 
 function getElementStyles(element: Element): String[] {
@@ -459,8 +545,163 @@ function getElementPosition(element: Element): String {
   }
 }
 
+//Quiz helpers
+function sanitizeStringLiteral(s: string | undefined): string {
+  if (s == null) return '';
+  // Langium STRING => souvent avec guillemets, ex: "hello"
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.substring(1, s.length - 1);
+  }
+  return s;
+}
+function escapeHtml(s: string): string {
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
+  if (!quizNode.link) return;
+  const raw = sanitizeLink(quizNode.link);
+  if (!raw) return;
+  if (isRemoteLink(raw)) {
+    const src = encodeURI(raw);
+
+    const joinUrlRaw = sanitizeStringLiteral((quizNode as any).joinUrl);
+    const joinCodeRaw = sanitizeStringLiteral((quizNode as any).joinCode);
+
+    const joinUrl = (joinUrlRaw || '').trim();
+    const joinCode = (joinCodeRaw || '').trim();
+
+    const hasJoinInfo = !!joinUrl || !!joinCode;
+    const effectiveJoinUrl = (joinUrl || (joinCode ? 'https://www.menti.com' : '')).trim();
+
+    const qrTarget = joinCode
+      ? `${effectiveJoinUrl}?code=${encodeURIComponent(joinCode.replaceAll(/\s+/g, ''))}`
+      : effectiveJoinUrl;
+
+    const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+
+    fileNode.append(`
+        <div class="quiz-layout"
+             onclick="event.stopPropagation()"
+             onmousedown="event.stopPropagation()"
+             onmouseup="event.stopPropagation()"
+             onwheel="event.stopPropagation()">
+
+          <div class="quiz-main">
+            <iframe
+              src="${src}"
+              allowfullscreen
+              loading="lazy">
+            </iframe>
+          </div>
+
+          ${
+            hasJoinInfo
+              ? `
+          <div class="quiz-side">
+            <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
+              <div id="${qrId}"></div>
+            </div>
+          </div>
+              `
+              : ''
+          }
+
+        </div>
+      `);
+
+    fileNode.append('</div>');
+  }
+}
+
+function displayPersonnalisedQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
+  const pq = quizNode.personnalisedQuiz;
+
+  if (!pq) return;
+
+  const title = sanitizeStringLiteral(pq.title);
+  const description = sanitizeStringLiteral(pq.description);
+
+  const level1 = "Plus rien n'a de secret pour toi !";
+  const level2 = 'Tu frôles la perfection !';
+  const level3 = 'Pas mal du tout !';
+  const level4 = 'Il va falloir réviser !';
+  const level5 = 'On ne peut pas être bon partout !';
+
+  const questions = (pq.question ?? []).map((q) => {
+    const content = sanitizeStringLiteral(q.content);
+
+    const answers = (q.option ?? []).map((opt) => {
+      const isCorrect = opt.correct === 'true';
+      return {
+        option: sanitizeStringLiteral(opt.answer),
+        correct: isCorrect,
+      };
+    });
+
+    const correctMsgRaw = sanitizeStringLiteral((q as any).correctMessage);
+    const incorrectMsgRaw = sanitizeStringLiteral((q as any).incorrectMessage);
+
+    const correctMsg = correctMsgRaw && correctMsgRaw.trim().length > 0 ? correctMsgRaw : 'Bonne réponse ✅';
+
+    const incorrectMsg = incorrectMsgRaw && incorrectMsgRaw.trim().length > 0 ? incorrectMsgRaw : 'Mauvaise réponse ❌';
+
+    const correctHtml = `<p><span>${escapeHtml(correctMsg)}</span></p>`;
+    const incorrectHtml = `<p><span>${escapeHtml(incorrectMsg)}</span></p>`;
+
+    return {
+      q: content,
+      a: answers,
+      correct: correctHtml,
+      incorrect: incorrectHtml,
+    };
+  });
+
+  const quizObject = {
+    info: {
+      name: title,
+      main: description,
+      level1,
+      level2,
+      level3,
+      level4,
+      level5,
+    },
+    questions,
+  };
+
+  const jsonPretty = JSON.stringify(quizObject, null, 2).replaceAll(/<\/script>/gi, '<\\/script>');
+
+  fileNode.append(`<div class="quiz">`);
+  fileNode.append(`<script data-quiz>\nquiz = ${jsonPretty};\n</script>`);
+  fileNode.append(`</div>`);
+
+  fileNode.append('</div>');
+}
+
+function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
+  fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
+
+  if (quizNode.link) {
+    displayOnlineQuiz(quizNode, fileNode);
+    return;
+  }
+
+  if (quizNode.personnalisedQuiz) {
+    displayPersonnalisedQuiz(quizNode, fileNode);
+    return;
+  }
+
+  fileNode.append('<!-- Quiz node: no link and no personalisedQuiz -->');
+  fileNode.append('</div>');
+}
 function sanitizeLink(link: string) {
-  if (!link) return link;
+  if (!link) return '';
   if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
   if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
   return link;
@@ -563,12 +804,7 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   );
 }
 
-function generateText(
-  text: Text,
-  fileNode: CompositeGeneratorNode,
-  styles: String[],
-  template?: TemplateContext
-) {
+function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
   fileNode.append('<div class="text"');
 
   if (isBasicText(text) && text.align) {
@@ -582,45 +818,30 @@ function generateText(
 
   if (isCode(text)) {
     // TODO
-  } 
-  else if (isParagraph(text)) {
-    generateParagraph(
-      text,
-      fileNode,
-      text.style,
-      template      
-    );
-  } 
-  else if (isList(text)) {
+  } else if (isParagraph(text)) {
+    generateParagraph(text, fileNode, text.style, template);
+  } else if (isList(text)) {
     // TODO
-  } 
-  else {
+  } else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
   fileNode.append('</div>');
 }
 
-
 function generateParagraph(
   paragraph: Paragraph,
   fileNode: CompositeGeneratorNode,
   elementStyle: any,
-  template?: TemplateContext
+  template?: TemplateContext,
 ) {
-  const tag =
-    paragraph.type === 'title' ? 'h1' :
-    paragraph.type === 'subtitle' ? 'h2' : 'p';
+  const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
 
-  const resolvedStyles = resolveTextStyles(
-    paragraph.type,
-    elementStyle,
-    template
-  );
+  const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
 
   fileNode.append(
     `<${tag} style="${DEFAULT_TEXT_STYLE}${resolvedStyles.join(' ')}">
       ${paragraph.content}
-     </${tag}>`
+     </${tag}>`,
   );
 }
