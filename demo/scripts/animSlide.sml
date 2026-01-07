@@ -48,6 +48,23 @@ presentation:
               order: 1
     -slide:
       elements:
+        -title: 
+          content: "Line animated Code"
+        - code:
+            language: "javascript"
+            // animated: true
+            content: 
+              "
+              const x = 1;
+              const y = 2;
+              const z = x + y;
+              "
+            // explanations:
+            //   1. "Declares a constant x with value 1"
+            //   2. "Declares a constant y with value 2"
+            //   3. "Declares a constant z as the sum of x and y"
+    -slide:
+      elements:
         -text:
             content: "Image issue du web"
             style:
@@ -63,36 +80,3 @@ presentation:
               rotation: 5
             animation:
               order: 1
-    -slide:
-      elements:
-        -title: 
-          content: "Line animated Code"
-        -group:
-          position:
-            x: center
-          elements:
-            -code:
-              animated: true
-              content: 
-              " 
-                sum = 0
-                for i in range(10):
-                    sum += i
-                    print(sum)
-              "
-            -text:
-              content: "initializes sum to zero"
-              animation:
-                order: 1
-            -text:
-              content: "iterates from 0 to 9"
-              animation:
-                order: 2
-            -text:
-              content: "adds i to sum in each iteration"
-              animation:
-                order: 3
-            -text:
-              content: "prints the current value of sum"  
-              animation:
-                order: 4

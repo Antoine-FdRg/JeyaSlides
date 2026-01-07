@@ -250,7 +250,45 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     renderQuizQRCodes(event.currentSlide);
   });
 </script>
-
+    <script>
+      // Synchronize code explanations with Reveal.js fragments
+      function updateCodeExplanations() {
+        const currentSlide = document.querySelector('section.present');
+        if (!currentSlide) return;
+        
+        // Get the current fragment index from data-fragment attribute
+        const fragmentAttr = currentSlide.getAttribute('data-fragment');
+        const currentFragment = fragmentAttr ? parseInt(fragmentAttr) : -1;
+        
+        // Find all explanation elements in the current slide
+        const explanations = currentSlide.querySelectorAll('[class*="explain-"]');
+        
+        explanations.forEach(el => {
+          // Extract the line number from class like "explain-1", "explain-2", etc.
+          const match = el.className.match(/explain-(\\d+)/);
+          if (match) {
+            const lineNumber = parseInt(match[1]);
+            if (currentFragment >= lineNumber-2) {
+              el.style.opacity = '1';
+              el.style.visibility = 'visible';
+            } else {
+              el.style.opacity = '0';
+              el.style.visibility = 'hidden';
+            }
+          }
+        });
+      }
+      
+      // Initialize explanations on ready
+      Reveal.on('ready', updateCodeExplanations);
+      
+      // Update on slide change
+      Reveal.on('slidechanged', updateCodeExplanations);
+      
+      // Update on fragment shown/hidden
+      Reveal.on('fragmentshown', updateCodeExplanations);
+      Reveal.on('fragmenthidden', updateCodeExplanations);
+    <\/script>
 
   </body>
   </html>`);
@@ -366,7 +404,13 @@ function generateSlide(
   fileNode.append('</section>');
 }
 
-function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined, template?: TemplateContext) {
+function generateGroup(
+  group: Group,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+  template?: TemplateContext,
+) {
   const groupStyles = [...styles];
   const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
   if (!hasPosition) {
@@ -567,14 +611,14 @@ function sanitizeLink(link: string) {
 }
 
 interface AnimationData {
-  classes?: string,
-  attributes?: string,
+  classes?: string;
+  attributes?: string;
 }
 function getElementAnimation(element: Element): AnimationData | undefined {
   if (!element.animation) return undefined;
   const animation = element.animation;
   const order = animation.order;
-  return {classes: `fragment`, attributes: `data-fragment-index="${order}"`  };
+  return { classes: `fragment`, attributes: `data-fragment-index="${order}"` };
 }
 
 //Quiz helpers
@@ -716,7 +760,12 @@ function displayPersonnalisedQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNo
   fileNode.append('</div>');
 }
 
-function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[], animationData: AnimationData | undefined) {
+function generateQuiz(
+  quizNode: Quiz,
+  fileNode: CompositeGeneratorNode,
+  styles: String[],
+  animationData: AnimationData | undefined,
+) {
   const animationClass = animationData?.classes || '';
   const animationAttributes = animationData?.attributes || '';
   fileNode.append(`<div class="quiz-wrap ${animationClass}" ${animationAttributes} onclick="event.stopPropagation()">`);
@@ -796,7 +845,12 @@ function getMimeTypeFromFilename(filename: string): string {
   }
 }
 
-function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined) {
+function generateImage(
+  image: Image,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
   const animationClass = animationData?.classes || '';
   const animationAttributes = animationData?.attributes || '';
   const srcRaw = copyLocalAssetIfNeeded(image.link);
@@ -809,7 +863,12 @@ function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: s
   fileNode.append(` onclick="openImageFullscreen(this)" onerror="this.style.display='none'"/></div>`);
 }
 
-function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined) {
+function generateVideo(
+  video: Video,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
   const animationClass = animationData?.classes || '';
   const animationAttributes = animationData?.attributes || '';
   const raw = sanitizeLink(video.link);
@@ -838,7 +897,13 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: s
   );
 }
 
-function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined, template?: TemplateContext) {
+function generateText(
+  text: Text,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+  template?: TemplateContext,
+) {
   const animationClass = animationData?.classes || '';
   const classAttr = animationClass ? `class="text ${animationClass}"` : 'class="text"';
   const animationAttributes = animationData?.attributes || '';
@@ -868,17 +933,54 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: stri
 
 function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
   const lang = code.language ? code.language : 'plaintext';
-  const lineAnimation = code.animated
-    ? `data-line-numbers="${code.content
+  const hasExplanations = code.explanations && code.explanations.length > 0;
+  if (code.animated && hasExplanations) {
+    generateExplainedCode(code, lang, fileNode, true);
+    return;
+  }
+  if (code.animated) {
+    generateCodeBlock(code.content, lang, fileNode, true);
+    return;
+  }
+  if (hasExplanations) {
+    generateExplainedCode(code, lang, fileNode);
+    return;
+  }
+  generateCodeBlock(code.content, lang, fileNode);
+
+  function generateExplainedCode(code: Code, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+    fileNode.append(
+      '<div class="group" style="display: flex; flex-direction: row; align-items: center; min-width: 800px; max-width: 80%;">',
+    );
+    generateCodeBlock(code.content, language, fileNode, true);
+    fileNode.append('<div class="code-explanations" style="margin: 20px 0; ">');
+    for (const explanation of code.explanations) {
+      let explainClass = '';
+      let style = '';
+      if (animated) {
+        explainClass = `class="explain-${explanation.line}"`;
+        style = 'opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out;';
+      }
+      fileNode.append(
+        `<div ${explainClass} style="font-size: .55em; line-height: 1.2em; text-align: left; ${style}">${explanation.content}</div>`,
+      );
+    }
+    fileNode.append('</div>');
+    fileNode.append('</div>');
+  }
+
+  function generateCodeBlock(content: string, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+    let lineAnimation = '';
+    if (animated) {
+      lineAnimation = `data-line-numbers="${content
         .split('\n')
         .map((_, i) => i + 1)
-        .join('|')}"`
-    : '';
-  fileNode.append(
-    `<pre><code data-trim class="language-${lang}" ${lineAnimation} style="${DEFAULT_ELEMENT_STYLES.join(' ')}">`,
-  );
-  fileNode.append(code.content);
-  fileNode.append(`</code></pre>`);
+        .join('|')}"`;
+    }
+    fileNode.append(
+      `<pre style="width: fit-content"><code class="language-${language}" data-trim ${lineAnimation}>${content}</code></pre>`,
+    );
+  }
 }
 
 function generateParagraph(
@@ -896,7 +998,7 @@ function generateParagraph(
       ${paragraph.content}
      </${tag}>`,
   );
-  
+
   function markdownToHtml(markdown: string): string {
     if (!markdown) return '';
     let html = markdown;
