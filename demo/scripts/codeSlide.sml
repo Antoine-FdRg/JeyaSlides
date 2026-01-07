@@ -24,3 +24,16 @@ presentation:
                 else:
                     return n * factorial(n - 1)
           "
+    -slide:
+      elements:
+        -title: 
+          content: "Line animated Code"
+        -code:
+          animated: true
+          content: 
+          " 
+            sum = 0
+            for i in range(10):
+                sum += i
+                print(sum)
+          "

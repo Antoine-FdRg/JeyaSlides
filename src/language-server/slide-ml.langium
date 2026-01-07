@@ -88,6 +88,7 @@ Text:
 Code:
   'code:' 
   ('language:' language=STRING)?
+  ('animated:' animated=BOOLEAN)?
   'content:' content=STRING;
 
 BasicText:
