@@ -1,11 +1,14 @@
 presentation:
-  template: "quantikTemplate"
+  template: "upgradedQuantikTemplate"
 
   slides:
     -slide:
       elements:
         -title:
             content: "Introduction to Quantum Physics"
+            align: center
+        -subtitle:
+            content: "(made easy!)"
             align: center
         -text:
             content: "Quantik"
@@ -27,6 +30,11 @@ presentation:
             -text:
               content: "A quantum system can exist in multiple states at once."
               align: center
+              style:
+                font:
+                  name: "Playfair Display"
+                  color: #c2ce13
+
             -group:
               elements:
                 -text:

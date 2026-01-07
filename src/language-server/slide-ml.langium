@@ -18,17 +18,35 @@ TemplateSlot:
 Template:
   'template:'
     'name:' name=ID
-    (style=TemplateStyle)?
+    (defaults=TemplateDefaults)?
     ('titleTemplate:' titleTemplate=TemplateSlot)?
     ('bodyTemplate:' bodyTemplate=TemplateSlot)?
 ;
 
+TemplateDefaults:
+  'defaults:'
+    (background=TemplateBackground)?
+    (textStyles=TemplateTextStyles)?
+;
 
-TemplateStyle:
-  'style:' 
-    ('backgroundColor:' backgroundColor=COLOR)?
+TemplateBackground:
+  'background:'
+    'color:' color=COLOR
+;
+
+TemplateTextStyles:
+  'textStyles:'
+    (entries+=TemplateTextStyleEntry)+
+;
+
+TemplateTextStyleEntry:
+  key=ID ':'
+    ('align:' align=TextAlignment)?
     (font=Font)?
-    (transition=Transition)?
+    ('transformations:'
+      '-' transformations+=FontTransformation
+      ('-' transformations+=FontTransformation)*
+    )?
 ;
 
 Presentation:

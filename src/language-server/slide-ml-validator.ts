@@ -1,5 +1,5 @@
 import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
-import { JeyaSlidesAstType, Template } from './generated/ast';
+import { JeyaSlidesAstType } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
 export function registerValidationChecks(services: SlideMLServices) {
@@ -7,7 +7,7 @@ export function registerValidationChecks(services: SlideMLServices) {
   const validator = services.validation.SlideMLValidator;
 
   const checks: ValidationChecks<AstTypeList<JeyaSlidesAstType>> = {
-    Template: validator.validateTemplate,
+    // Template: validator.validateTemplate,
     Presentation: validator.validate,
     Slide: validator.validate,
     Element: validator.validate,
@@ -258,18 +258,18 @@ private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept:
     }
   }
 
-  validateTemplate(node: AstNode, accept: ValidationAcceptor): void {
-    const template = node as Template;
-    const hasStyle = !!template.style;
-    const hasTitle = !!template.titleTemplate;
-    const hasBody = !!template.bodyTemplate;
+  // validateTemplate(node: AstNode, accept: ValidationAcceptor): void {
+  //   const template = node as Template;
+  //   const hasStyle = !!template.style;
+  //   const hasTitle = !!template.titleTemplate;
+  //   const hasBody = !!template.bodyTemplate;
 
-    if (!hasStyle && !hasTitle && !hasBody) {
-      accept(
-        'error',
-        'Un Template doit définir au moins un style, un templateTitle ou un templateBody.',
-        { node: template }
-      );
-    }
-  }
+  //   if (!hasStyle && !hasTitle && !hasBody) {
+  //     accept(
+  //       'error',
+  //       'Un Template doit définir au moins un style, un templateTitle ou un templateBody.',
+  //       { node: template }
+  //     );
+  //   }
+  // }
 }

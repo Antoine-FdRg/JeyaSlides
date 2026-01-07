@@ -26,23 +26,13 @@ import {
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
+import { extractTextDefaults, resolveTextStyles } from './template-utils';
+import { TemplateContext } from './template-types';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
 const DEFAULT_TEXT_STYLE = 'margin: 0;';
 const ZINDEX_BACK_VALUE = -10;
 const ZINDEX_FRONT_VALUE = 100;
-type TemplateContext = {
-  titleElements?: Element[];
-  bodyElements?: Element[];
-  style?: {
-    backgroundColor?: string;
-    font?: {
-      name?: string;
-      size?: string;
-      color?: string;
-    };
-  };
-};
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
   const data = extractDestinationAndName(filePath, destination);
@@ -167,32 +157,16 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
     body: templateModel.bodyTemplate?.elements.length
   });
 
-  return {
-    titleElements: templateModel.titleTemplate?.elements,
-    bodyElements: templateModel.bodyTemplate?.elements,
-    style: templateModel.style
-  };
+return {
+  titleElements: templateModel.titleTemplate?.elements,
+  bodyElements: templateModel.bodyTemplate?.elements,
+  backgroundColor: templateModel.defaults?.background?.color,
+  textDefaults: extractTextDefaults(templateModel)
+};
 }
 
 function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
   const templateCtx = loadTemplate(presentation);
-  // let author = presentation.author ?? 'Anonymous';
-  // if (author.startsWith('"') && author.endsWith('"')) {
-  //   author = author.substring(1, author.length - 1);
-  // }
-
-  // let title = presentation.name;
-  // if (title.startsWith('"') && title.endsWith('"')) {
-  //   title = title.substring(1, title.length - 1);
-  // }
-
-  // fileNode.append(`
-  //           <section>
-  //               <h1>${title}</h1>
-  //               <p>by ${author+"jess"}</p>
-  //           </section>`);
-
-  // Generate content slides
   presentation.slides.forEach((slide, index) => {
     generateSlide(slide, index, templateCtx, fileNode);
   });
@@ -247,16 +221,12 @@ function generateSlide(
     : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
-  const bg = template?.style?.backgroundColor;
-  const font = template?.style?.font;
+  const bg = template?.backgroundColor;
 
   const slideStyle = `
     width: 100%;
     height: 100%;
     ${bg ? `background-color: ${bg};` : ''}
-    ${font?.name ? `font-family: ${font.name};` : ''}
-    ${font?.color ? `color: ${font.color};` : ''}
-    ${font?.size ? `font-size: ${font.size}px;` : ''}
   `;
 
   fileNode.append(`<section${transitionAttrs} style="${slideStyle}">`);
@@ -269,18 +239,23 @@ function generateSlide(
       : template?.bodyElements;
 
   templateElements?.forEach(el =>
-    generateElement(el, fileNode)
+    generateElement(el, fileNode, template)
   );
 
   slide.elements.forEach(el =>
-    generateElement(el, fileNode)
+    generateElement(el, fileNode, template)
   );
 
   fileNode.append('</div>');
   fileNode.append('</section>');
 }
 
-function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateGroup(
+  group: Group, 
+  fileNode: CompositeGeneratorNode,
+  styles: String[],
+  template?: TemplateContext
+) {
   const groupStyles = [...styles];
   const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
   if (!hasPosition) {
@@ -295,17 +270,21 @@ function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: S
   // applyAnimation(group.animation); TODO
 
   for (const child of group.elements) {
-    generateElement(child, fileNode);
+    generateElement(child, fileNode, template);
   }
 
   fileNode.append('</div>');
 }
 
-function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
+function generateElement(
+  element: Element,
+  fileNode: CompositeGeneratorNode,
+  template?: TemplateContext
+) {
   const styles: String[] = getElementStyles(element);
   styles.push(getElementPosition(element));
-  if (isGroup(element)) return generateGroup(element, fileNode, styles);
-  if (isText(element)) return generateText(element, fileNode, styles);
+  if (isGroup(element)) return generateGroup(element, fileNode, styles, template);
+  if (isText(element)) return generateText(element, fileNode, styles, template);
   if (isImage(element)) return generateImage(element, fileNode, styles);
   if (isVideo(element)) return generateVideo(element, fileNode, styles);
   // if (isQuiz(element)) return generateQuiz(element, fileNode, styles); TODO
@@ -574,46 +553,64 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   );
 }
 
-function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateText(
+  text: Text,
+  fileNode: CompositeGeneratorNode,
+  styles: String[],
+  template?: TemplateContext
+) {
   fileNode.append('<div class="text"');
-  if (isBasicText(text)) {
-    if (text.align) {
-      styles.push(`display:flex; justify-content: ${text.align};`);
-    }
+
+  if (isBasicText(text) && text.align) {
+    styles.push(`display:flex; justify-content:${text.align};`);
   }
+
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }
   fileNode.append('>');
 
   if (isCode(text)) {
-    // generateCode(text, fileNode); TODO
-  } else if (isParagraph(text)) {
-    generateParagraph(text, fileNode);
-  } else if (isList(text)) {
-    // generateList(text, fileNode); TODO
-  } else {
+    // TODO
+  } 
+  else if (isParagraph(text)) {
+    generateParagraph(
+      text,
+      fileNode,
+      text.style,
+      template      
+    );
+  } 
+  else if (isList(text)) {
+    // TODO
+  } 
+  else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
   fileNode.append('</div>');
 }
 
-function generateParagraph(paragraph: Paragraph, fileNode: CompositeGeneratorNode) {
-  switch (paragraph.type) {
-    case 'title':
-      fileNode.append(`<h1 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h1>`);
-      break;
 
-    case 'subtitle':
-      fileNode.append(`<h2 style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</h2>`);
-      break;
+function generateParagraph(
+  paragraph: Paragraph,
+  fileNode: CompositeGeneratorNode,
+  elementStyle: any,
+  template?: TemplateContext
+) {
+  const tag =
+    paragraph.type === 'title' ? 'h1' :
+    paragraph.type === 'subtitle' ? 'h2' : 'p';
 
-    case 'text':
-      fileNode.append(`<p style="${DEFAULT_TEXT_STYLE}">${paragraph.content}</p>`);
-      break;
+  const resolvedStyles = resolveTextStyles(
+    paragraph.type,
+    elementStyle,
+    template
+  );
 
-    default:
-      throw new Error(`Unknown paragraph type: ${paragraph.type}`);
-  }
+  fileNode.append(
+    `<${tag} style="${DEFAULT_TEXT_STYLE}${resolvedStyles.join(' ')}">
+      ${paragraph.content}
+     </${tag}>`
+  );
 }
