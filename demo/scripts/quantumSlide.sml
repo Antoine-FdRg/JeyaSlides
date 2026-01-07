@@ -1,4 +1,6 @@
 presentation:
+  name: "Introduction to Quantum Physics"
+  author: "Dr. Jane Doe"
   slides:
     -slide:
       elements:
