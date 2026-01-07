@@ -26,6 +26,7 @@ import {
   isBasicText,
   isQuiz,
   Quiz,
+  Code,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -80,6 +81,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
     <style>
   body { font-family: Arial, sans-serif; }
 
@@ -164,6 +166,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
     <script src="https://unpkg.com/tldreveal/dist/bundle/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"><\/script>
     <script>
       // Open an image in a fullscreen overlay. Accepts an HTMLImageElement or a URL string.
       function openImageFullscreen(srcOrElem) {
@@ -203,7 +206,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
           disableLayout: true,
           slideNumber: ${presentation.displaySlideNumber ?? false},
           scrollActivationWidth: undefined,
-          plugins: [Tldreveal.Tldreveal()],
+          plugins: [Tldreveal.Tldreveal(), RevealHighlight],
           tldreveal: {
             disableLayoutWarning: false,
           },
@@ -846,7 +849,7 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
   fileNode.append('>');
 
   if (isCode(text)) {
-    // TODO
+    generateCode(text, fileNode);
   } else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
   } else if (isList(text)) {
@@ -856,6 +859,13 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
   }
 
   fileNode.append('</div>');
+}
+
+function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
+  const lang = code.language ? code.language : 'plaintext';
+  fileNode.append(`<pre><code data-trim class="language-${lang}" style="${DEFAULT_ELEMENT_STYLES.join(' ')}">`);
+  fileNode.append(code.content);
+  fileNode.append(`</code></pre>`);
 }
 
 function markdownToHtml(markdown: string): string {

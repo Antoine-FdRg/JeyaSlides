@@ -87,7 +87,7 @@ Text:
 
 Code:
   'code:' 
-  'language:' language=STRING 
+  ('language:' language=STRING)?
   'content:' content=STRING;
 
 BasicText:
