@@ -18,18 +18,35 @@ TemplateSlot:
 Template:
   'template:'
     'name:' name=ID
-    (style=TemplateStyle)?
+    (defaults=TemplateDefaults)?
     ('titleTemplate:' titleTemplate=TemplateSlot)?
     ('bodyTemplate:' bodyTemplate=TemplateSlot)?
 ;
 
-
-TemplateStyle:
-  'style:' 
-    ('backgroundColor:' backgroundColor=COLOR)?
-    (font=Font)?
-    (transition=Transition)?
+TemplateDefaults:
+  'defaults:'
+    (background=TemplateBackground)?
+    (textStyles=TemplateTextStyles)?
 ;
+
+TemplateBackground:
+  'background:'
+    'color:' color=ColorValue
+;
+
+TemplateTextStyles:
+  'textStyles:'
+    (entries+=TemplateTextStyleEntry)+
+;
+
+TemplateTextStyleEntry:
+  key=TextStyleKey ':'
+    ('align:' align=TextAlignment)?
+    (font=Font)?
+;
+
+TextStyleKey returns string:
+  'title' | 'subtitle' | 'text';
 
 Presentation:
   'presentation:' 
@@ -115,7 +132,7 @@ Quiz:
 Style:
   'style:'
     (size=Size)?
-    ('backgroundColor:' backgroundColor=COLOR)?
+    ('backgroundColor:' backgroundColor=ColorValue)?
     (font=Font)?
     ('rotation:' rotation=NUMBER)?
 ;
@@ -134,7 +151,7 @@ Font:
   'font:'
     ('name:' name=STRING)?
     ('size:' size=NUMBER)?
-    ('color:' color=COLOR)?
+    ('color:' color=ColorValue)?
     ('transformations:'
       '-'transformations+=FontTransformation 
       ('-' transformations+=FontTransformation)* )?
@@ -193,8 +210,12 @@ TextType returns string:
 DurationType returns string:
   'fast' | 'default' | 'slow';
 
+ColorValue returns string:
+    HexColor | STRING
+;
 
-terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+
 terminal BOOLEAN: /true|false/;
 terminal NUMBER: /-?\d+(\.\d+)?/;
 terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;
