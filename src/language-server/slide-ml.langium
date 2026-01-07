@@ -31,7 +31,7 @@ TemplateDefaults:
 
 TemplateBackground:
   'background:'
-    'color:' color=COLOR
+    'color:' color=ColorValue
 ;
 
 TemplateTextStyles:
@@ -131,7 +131,7 @@ Quiz:
 Style:
   'style:'
     (size=Size)?
-    ('backgroundColor:' backgroundColor=COLOR)?
+    ('backgroundColor:' backgroundColor=ColorValue)?
     (font=Font)?
     ('rotation:' rotation=NUMBER)?
 ;
@@ -150,7 +150,7 @@ Font:
   'font:'
     ('name:' name=STRING)?
     ('size:' size=NUMBER)?
-    ('color:' color=COLOR)?
+    ('color:' color=ColorValue)?
     ('transformations:'
       '-'transformations+=FontTransformation 
       ('-' transformations+=FontTransformation)* )?
@@ -209,8 +209,12 @@ TextType returns string:
 DurationType returns string:
   'fast' | 'default' | 'slow';
 
+ColorValue returns string:
+    HexColor | STRING
+;
 
-terminal COLOR: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+
 terminal BOOLEAN: /true|false/;
 terminal NUMBER: /-?\d+(\.\d+)?/;
 terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;

@@ -10,7 +10,7 @@ template:
         font:
           name: "Playfair Display"
           size: 52
-          color: #6f0505
+          color: "orange"
         transformations:
           - bold
           - italic
