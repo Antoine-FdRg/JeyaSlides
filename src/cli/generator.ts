@@ -18,6 +18,8 @@ import {
   isImage,
   Video,
   isVideo,
+  isQuiz,
+  Quiz,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 
@@ -53,10 +55,73 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <title>Presentation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
+  body { font-family: Arial, sans-serif; }
+
+/* centre uniquement la slide qui contient un quiz */
+.has-quiz{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* conteneur (iframe + overlay) */
+.quiz-layout{
+  height: 90vh;
+  position: relative;
+  display: block;
+  margin: 0; /* centré par .has-quiz, pas par margin auto */
+}
+
+/* iframe */
+.quiz-main{
+  width: 100%;
+  height: 100%;
+}
+
+.quiz-main iframe{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* QR overlay */
+.quiz-side{
+  position: absolute;
+  top: 0px;
+  right: -220px;
+  z-index: 9999;
+
+  width: auto;
+  height: auto;
+
+  background: rgba(20,20,20,0.92);
+  color: #fff;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 14px 14px;
+  border-radius: 12px;
+  
+}
+
+.quiz-side .qr{
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+@media (max-width: 1100px){
+  .quiz-side{ display:none; }
+}
+
+
+
     </style>
 </head>
 <body>
@@ -111,9 +176,50 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
             maxScale: 2.0,
             disableLayout: true,
             slideNumber: ${presentation.displaySlideNumber ?? false}
-  },
-  { src: 'plugin/quiz/js/quiz.js', async: true, callback: function() { prepareQuizzes({}); }]);
+        
+  }]);
     <\/script>
+    <script src="../plugin/quiz/js/jquery.min.js"></script>
+    <script src="../plugin/quiz/js/slickQuiz.js"></script>
+    <script src="../plugin/quiz/js/quiz.js"></script>
+<script>
+  Reveal.on('ready', function () {
+    prepareQuizzes({});
+  });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  function renderQuizQRCodes(scope) {
+    if (typeof QRCode !== 'function') return;
+
+    const root = scope || document;
+    root.querySelectorAll('[data-qr-target]').forEach((box) => {
+      const target = box.getAttribute('data-qr-target');
+      const id = box.getAttribute('data-qr-id');
+      if (!id || !target) return;
+
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      if (el.getAttribute('data-qr-done') === '1') return;
+
+      el.innerHTML = '';
+      new QRCode(el, { text: target, width: 140, height: 140 });
+      el.setAttribute('data-qr-done', '1');
+    });
+  }
+
+  Reveal.on('ready', function () {
+    renderQuizQRCodes(document);
+  });
+
+  Reveal.on('slidechanged', function (event) {
+    // ne rend que la slide courante
+    renderQuizQRCodes(event.currentSlide);
+  });
+</script>
+
+
   </body>
   </html>`);
 }
@@ -143,7 +249,8 @@ function generatePresentationSlides(presentation: Presentation, fileNode: Compos
 }
 
 function generateSlide(slide: Slide, fileNode: CompositeGeneratorNode) {
-  fileNode.append('<section style="width: 100%; height: 100%;">');
+  const hasQuiz = slide.elements.some((e) => isQuiz(e));
+  fileNode.append(`<section class="${hasQuiz ? 'has-quiz' : ''}" style="width: 100%; height: 100%;">`);
   for (const element of slide.elements) {
     generateElement(element, fileNode);
   }
@@ -172,8 +279,8 @@ function generateElement(element: Element, fileNode: CompositeGeneratorNode) {
   if (isText(element)) return generateText(element, fileNode, styles);
   if (isImage(element)) return generateImage(element, fileNode, styles);
   if (isVideo(element)) return generateVideo(element, fileNode, styles);
-  // if (isQuiz(element)) return generateQuiz(element, fileNode, styles); TODO
-  throw new Error(`Unhandled element type: ${element.$type}`);
+  if (isQuiz(element)) return generateQuiz(element, fileNode, styles);
+  throw new Error(`Unhandled element type: ${(element as Element).$type}`);
 }
 
 function getElementStyles(element: Element): String[] {
@@ -230,6 +337,127 @@ function getElementStyles(element: Element): String[] {
     }
     return fontStyles;
   }
+}
+
+//Quiz helpers
+function sanitizeStringLiteral(s: string | undefined): string {
+  if (s == null) return '';
+  // Langium STRING => souvent avec guillemets, ex: "hello"
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.substring(1, s.length - 1);
+  }
+  return s;
+}
+function escapeHtml(s: string): string {
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
+  // Conteneur quiz (on ne met PAS tes DEFAULT_ELEMENT_STYLES ici, sinon ça casse l'iframe)
+  fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
+
+  if (quizNode.link) {
+    const raw = sanitizeLink(quizNode.link);
+
+    if (isRemoteLink(raw)) {
+      const src = encodeURI(raw);
+
+      const joinUrl = (sanitizeStringLiteral((quizNode as any).joinUrl) || 'https://www.menti.com').trim();
+      const joinCode = (sanitizeStringLiteral((quizNode as any).joinCode) || '').trim();
+
+      const qrTarget = joinCode ? `${joinUrl}?code=${encodeURIComponent(joinCode.replace(/\s+/g, ''))}` : joinUrl;
+
+      const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+
+      fileNode.append(`
+      <div class="quiz-layout"
+           onclick="event.stopPropagation()"
+           onmousedown="event.stopPropagation()"
+           onmouseup="event.stopPropagation()"
+           onwheel="event.stopPropagation()">
+
+        <div class="quiz-main">
+          <iframe
+            src="${src}"
+            allowfullscreen
+            loading="lazy">
+          </iframe>
+        </div>
+      </div>
+      <div class="quiz-side">
+          <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
+            <div id="${qrId}"></div>
+          </div>
+        </div>
+    `);
+
+      fileNode.append('</div>');
+      return;
+    }
+  }
+
+  // --- Cas 2 : quiz inline (SlickQuiz)  ✅ GARDÉ
+  if (quizNode.personnalisedQuiz) {
+    const pq = quizNode.personnalisedQuiz;
+
+    const title = sanitizeStringLiteral(pq.title);
+    const description = sanitizeStringLiteral(pq.description);
+
+    const level1 = 'Jeopardy Ready';
+    const level2 = 'Jeopardy Contender';
+    const level3 = 'Jeopardy Amateur';
+    const level4 = 'Jeopardy Newb';
+    const level5 = 'Stay in school, kid...';
+
+    const questions = (pq.question ?? []).map((q) => {
+      const content = sanitizeStringLiteral(q.content);
+
+      const answers = (q.option ?? []).map((opt) => ({
+        option: sanitizeStringLiteral(opt.answer),
+        correct: Boolean(opt.correct),
+      }));
+
+      const correctMsg = sanitizeStringLiteral(q.correctMessage);
+      const incorrectMsg = sanitizeStringLiteral(q.incorrectMessage);
+
+      const correctHtml = `<p><span>That's right!</span> ${escapeHtml(correctMsg)}</p>`;
+      const incorrectHtml = `<p><span>Uhh no.</span> ${escapeHtml(incorrectMsg)}</p>`;
+
+      return {
+        q: content,
+        a: answers,
+        correct: correctHtml,
+        incorrect: incorrectHtml,
+      };
+    });
+
+    const quizObject = {
+      info: {
+        name: title,
+        main: description,
+        level1,
+        level2,
+        level3,
+        level4,
+        level5,
+      },
+      questions,
+    };
+
+    const jsonPretty = JSON.stringify(quizObject, null, 2).replace(/<\/script>/gi, '<\\/script>');
+    fileNode.append(`<script data-quiz>\nquiz = ${jsonPretty};\n</script>`);
+
+    fileNode.append('</div>');
+    return;
+  }
+
+  fileNode.append('<!-- Quiz node: no link and no personalisedQuiz -->');
+  fileNode.append('</div>');
 }
 
 function sanitizeLink(link: string) {

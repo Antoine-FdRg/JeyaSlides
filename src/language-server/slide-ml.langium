@@ -100,7 +100,10 @@ Video:
 
 Quiz:
   'quiz:'
-    'link:' link=STRING
+    ('link:' link=STRING 
+    ('joinCode:' joinCode=STRING)? 
+    ('joinUrl:' joinUrl=STRING)? |
+     personnalisedQuiz=PersonnalisedQuiz)
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
@@ -109,8 +112,24 @@ Quiz:
 PersonnalisedQuiz:
   '-info:'
       'title:' title=STRING
+      'description:' description=STRING
   '-questions:'
+      (question+=Question)+
 ;
+
+Question:
+  '-question:'
+      'content:' content=STRING
+      'options:'
+          (option+=Option)+
+      'correctMessage:' correctMessage=STRING
+      'incorrectMessage:' incorrectMessage=STRING
+;
+
+Option:
+  '-option:' 
+      answer=STRING 
+      "correct:" correct=BOOLEAN;
 
 Style:
   'style:'
