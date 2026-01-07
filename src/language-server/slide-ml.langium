@@ -40,10 +40,13 @@ TemplateTextStyles:
 ;
 
 TemplateTextStyleEntry:
-  key=ID ':'
+  key=TextStyleKey ':'
     ('align:' align=TextAlignment)?
     (font=Font)?
 ;
+
+TextStyleKey returns string:
+  'title' | 'subtitle' | 'text';
 
 Presentation:
   'presentation:' 

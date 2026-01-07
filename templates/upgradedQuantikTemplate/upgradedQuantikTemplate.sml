@@ -5,7 +5,7 @@ template:
       color: #fcf3e3
 
     textStyles:
-      h1:
+      title:
         align: center
         font:
           name: "Playfair Display"
@@ -15,7 +15,7 @@ template:
             - bold
             - italic
 
-      h2:
+      subtitle:
         align: center
         font:
           name: "Playfair Display"
@@ -25,7 +25,7 @@ template:
             - bold
             - underline
 
-      p:
+      text:
         font:
           name: "Courier New"
           size: 24

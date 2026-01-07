@@ -25,11 +25,7 @@ export function resolveTextStyles(
 ): string[] {
   const styles: string[] = [];
 
-  const key =
-    paragraphType === 'title' ? 'h1' :
-    paragraphType === 'subtitle' ? 'h2' : 'p';
-
-  const defaults = template?.textDefaults?.[key];
+  const defaults = template?.textDefaults?.[paragraphType];
 
   if (defaults?.fontFamily) styles.push(`font-family:${defaults.fontFamily};`);
   if (defaults?.fontSize) styles.push(`font-size:${defaults.fontSize}px;`);

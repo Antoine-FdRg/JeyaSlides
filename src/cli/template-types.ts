@@ -11,8 +11,8 @@ export type TemplateContext = {
   bodyElements?: any[];
   backgroundColor?: string;
   textDefaults?: {
-    h1?: TextStyleDefaults;
-    h2?: TextStyleDefaults;
-    p?: TextStyleDefaults;
+    title?: TextStyleDefaults;
+    subtitle?: TextStyleDefaults;
+    text?: TextStyleDefaults;
   };
 };
