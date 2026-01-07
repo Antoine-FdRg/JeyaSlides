@@ -11,9 +11,9 @@ template:
           name: "Playfair Display"
           size: 52
           color: "orange"
-        transformations:
-          - bold
-          - italic
+          transformations:
+            - bold
+            - italic
 
       h2:
         align: center
@@ -21,8 +21,9 @@ template:
           name: "Playfair Display"
           size: 36
           color: #3c278a
-        transformations:
-          - bold
+          transformations:
+            - bold
+            - underline
 
       p:
         font:

@@ -11,7 +11,7 @@ export function extractTextDefaults(template: Template) {
       fontSize: entry.font?.size,
       color: entry.font?.color,
       align: entry.align,
-      transformations: entry.transformations
+      transformations: entry.font?.transformations
     };
   }
 
@@ -22,7 +22,7 @@ export function resolveTextStyles(
   paragraphType: 'title' | 'subtitle' | 'text',
   elementStyle: any,
   template?: TemplateContext
-): String[] {
+): string[] {
   const styles: string[] = [];
 
   const key =
@@ -47,6 +47,14 @@ export function resolveTextStyles(
     if (elementStyle.font.name) styles.push(`font-family:${elementStyle.font.name};`);
     if (elementStyle.font.size) styles.push(`font-size:${elementStyle.font.size}px;`);
     if (elementStyle.font.color) styles.push(`color:${elementStyle.font.color};`);
+  }
+
+  if (elementStyle?.font?.transformations) {
+    for (const t of elementStyle.font.transformations) {
+      if (t === 'bold') styles.push('font-weight:bold;');
+      if (t === 'italic') styles.push('font-style:italic;');
+      if (t === 'underline') styles.push('text-decoration:underline;');
+    }
   }
 
   return styles;

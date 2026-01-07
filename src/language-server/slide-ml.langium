@@ -43,10 +43,6 @@ TemplateTextStyleEntry:
   key=ID ':'
     ('align:' align=TextAlignment)?
     (font=Font)?
-    ('transformations:'
-      '-' transformations+=FontTransformation
-      ('-' transformations+=FontTransformation)*
-    )?
 ;
 
 Presentation:
