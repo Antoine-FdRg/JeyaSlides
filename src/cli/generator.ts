@@ -366,14 +366,16 @@ function generateSlide(
   fileNode.append('</section>');
 }
 
-function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
+function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined, template?: TemplateContext) {
   const groupStyles = [...styles];
   const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
   if (!hasPosition) {
     groupStyles.unshift('position: relative;'); // position relative si le groupe n'a pas de position définie
   }
-
-  fileNode.append('<div class="group"');
+  const animationClass = animationData?.classes || '';
+  const classAttr = animationClass ? `class="group ${animationClass}"` : 'class="group"';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
   if (groupStyles.length > 0) {
     fileNode.append(` style="${groupStyles.join(' ')}"`);
   }
@@ -388,18 +390,19 @@ function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: S
 }
 
 function generateElement(element: Element, fileNode: CompositeGeneratorNode, template?: TemplateContext) {
-  const styles: String[] = getElementStyles(element);
+  const styles: string[] = getElementStyles(element);
   styles.push(getElementPosition(element));
-  if (isGroup(element)) return generateGroup(element, fileNode, styles, template);
-  if (isText(element)) return generateText(element, fileNode, styles, template);
-  if (isImage(element)) return generateImage(element, fileNode, styles);
-  if (isVideo(element)) return generateVideo(element, fileNode, styles);
-  if (isQuiz(element)) return generateQuiz(element, fileNode, styles);
+  const animationData = getElementAnimation(element);
+  if (isGroup(element)) return generateGroup(element, fileNode, styles, animationData, template);
+  if (isText(element)) return generateText(element, fileNode, styles, animationData, template);
+  if (isImage(element)) return generateImage(element, fileNode, styles, animationData);
+  if (isVideo(element)) return generateVideo(element, fileNode, styles, animationData);
+  if (isQuiz(element)) return generateQuiz(element, fileNode, styles, animationData);
   throw new Error(`Unhandled element type: ${(element as Element).$type}`);
 }
 
-function getElementStyles(element: Element): String[] {
-  const styles: String[] = [...DEFAULT_ELEMENT_STYLES];
+function getElementStyles(element: Element): string[] {
+  const styles: string[] = [...DEFAULT_ELEMENT_STYLES];
   if (!element.style) return styles;
   if (element.style.backgroundColor) {
     styles.push(`background-color: ${element.style.backgroundColor};`);
@@ -411,8 +414,8 @@ function getElementStyles(element: Element): String[] {
   styles.push(...(getFontStyles(element) || []));
   return styles;
 
-  function getSizeStyles(element: Element): String[] | undefined {
-    let sizeStyles: String[] = [];
+  function getSizeStyles(element: Element): string[] | undefined {
+    let sizeStyles: string[] = [];
     if (!element.style?.size) return;
     if (element.style.size.width) {
       sizeStyles.push(`width: ${element.style.size.width}%;`);
@@ -423,8 +426,8 @@ function getElementStyles(element: Element): String[] {
     return sizeStyles;
   }
 
-  function getFontStyles(element: Element): String[] | undefined {
-    let fontStyles: String[] = [];
+  function getFontStyles(element: Element): string[] | undefined {
+    let fontStyles: string[] = [];
     if (!element.style?.font) return;
     if (element.style.font.name) {
       fontStyles.push(`font-family: ${element.style.font.name};`);
@@ -454,10 +457,10 @@ function getElementStyles(element: Element): String[] {
   }
 }
 
-function getElementPosition(element: Element): String {
+function getElementPosition(element: Element): string {
   if (!element.position) return '';
-  let positionStyles: String[] = [];
-  let transformStyles: String[] = [];
+  let positionStyles: string[] = [];
+  let transformStyles: string[] = [];
   getXPosition(element.position.x, positionStyles, transformStyles);
   getYPosition(element.position.y, positionStyles, transformStyles);
   getZPosition(element.position.z, positionStyles);
@@ -477,7 +480,7 @@ function getElementPosition(element: Element): String {
    * @param styles la liste des styles
    * @param transformStyles la liste des styles de transformation
    */
-  function getXPosition(x: XPosition | undefined, styles: String[], transformStyles: String[]) {
+  function getXPosition(x: XPosition | undefined, styles: string[], transformStyles: string[]) {
     if (!x) return;
     if (isCoordinatePosition(x)) {
       if (x.value !== undefined) {
@@ -507,7 +510,7 @@ function getElementPosition(element: Element): String {
    * @param styles la liste des styles
    * @param transformStyles la liste des styles de transformation
    */
-  function getYPosition(y: YPosition | undefined, styles: String[], transformStyles: String[]) {
+  function getYPosition(y: YPosition | undefined, styles: string[], transformStyles: string[]) {
     if (!y) return;
     if (isCoordinatePosition(y)) {
       if (y.value !== undefined) {
@@ -536,7 +539,7 @@ function getElementPosition(element: Element): String {
    * @param z la position en Z
    * @param styles la liste des styles
    */
-  function getZPosition(z: ZPosition | undefined, styles: String[]) {
+  function getZPosition(z: ZPosition | undefined, styles: string[]) {
     if (!z) return;
     if (isCoordinatePosition(z)) {
       if (z.value !== undefined) {
@@ -554,6 +557,24 @@ function getElementPosition(element: Element): String {
       }
     }
   }
+}
+
+function sanitizeLink(link: string) {
+  if (!link) return '';
+  if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
+  if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
+  return link;
+}
+
+interface AnimationData {
+  classes?: string,
+  attributes?: string,
+}
+function getElementAnimation(element: Element): AnimationData | undefined {
+  if (!element.animation) return undefined;
+  const animation = element.animation;
+  const order = animation.order;
+  return {classes: `fragment`, attributes: `data-fragment-index="${order}"`  };
 }
 
 //Quiz helpers
@@ -695,8 +716,10 @@ function displayPersonnalisedQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNo
   fileNode.append('</div>');
 }
 
-function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
-  fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
+function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[], animationData: AnimationData | undefined) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div class="quiz-wrap ${animationClass}" ${animationAttributes} onclick="event.stopPropagation()">`);
 
   if (quizNode.link) {
     displayOnlineQuiz(quizNode, fileNode);
@@ -710,12 +733,6 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
 
   fileNode.append('<!-- Quiz node: no link and no personalisedQuiz -->');
   fileNode.append('</div>');
-}
-function sanitizeLink(link: string) {
-  if (!link) return '';
-  if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
-  if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
-  return link;
 }
 
 function isRemoteLink(link: string) {
@@ -779,21 +796,27 @@ function getMimeTypeFromFilename(filename: string): string {
   }
 }
 
-function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
   const srcRaw = copyLocalAssetIfNeeded(image.link);
   const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
-  fileNode.append(`<div class="image"><img src="${src}" alt="image" `);
+  const classAttr = animationClass ? `class="image ${animationClass}"` : 'class="image"';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><img src="${src} " alt="image" `);
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }
   fileNode.append(` onclick="openImageFullscreen(this)" onerror="this.style.display='none'"/></div>`);
 }
 
-function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
   const raw = sanitizeLink(video.link);
+  const classAttr = animationClass ? `class="video ${animationClass}"` : 'class="video"';
   const ytEmbed = getYouTubeEmbed(raw);
   if (ytEmbed) {
-    fileNode.append(`<div class="video"><iframe `);
+    fileNode.append(`<div ${classAttr} ${animationAttributes}><iframe `);
     if (styles.length > 0) {
       fileNode.append(`style="${styles.join(' ')}"`); //TODO: adapt size according to styles width="960" height="540"
     }
@@ -806,7 +829,7 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   const src = copyLocalAssetIfNeeded(raw);
   const videoSrc = isRemoteLink(src) ? encodeURI(src) : src.replaceAll('\\', '/');
   const mime = getMimeTypeFromFilename(videoSrc);
-  fileNode.append(`<div class="video"><video controls `);
+  fileNode.append(`<div ${classAttr}><video controls `);
   if (styles.length > 0) {
     fileNode.append(`style="${styles.join(' ')}"`);
   }
@@ -815,8 +838,11 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   );
 }
 
-function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
-  fileNode.append('<div class="text"');
+function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: string[], animationData: AnimationData | undefined, template?: TemplateContext) {
+  const animationClass = animationData?.classes || '';
+  const classAttr = animationClass ? `class="text ${animationClass}"` : 'class="text"';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
 
   if (isBasicText(text) && text.align) {
     styles.push(`display:flex; justify-content:${text.align};`);
@@ -842,7 +868,15 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
 
 function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
   const lang = code.language ? code.language : 'plaintext';
-  fileNode.append(`<pre><code data-trim class="language-${lang}" style="${DEFAULT_ELEMENT_STYLES.join(' ')}">`);
+  const lineAnimation = code.animated
+    ? `data-line-numbers="${code.content
+        .split('\n')
+        .map((_, i) => i + 1)
+        .join('|')}"`
+    : '';
+  fileNode.append(
+    `<pre><code data-trim class="language-${lang}" ${lineAnimation} style="${DEFAULT_ELEMENT_STYLES.join(' ')}">`,
+  );
   fileNode.append(code.content);
   fileNode.append(`</code></pre>`);
 }
