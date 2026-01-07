@@ -1,5 +1,5 @@
 template:
-  name: complexQuantikTemplate
+  name: upgradedQuantikTemplate
   defaults:
     background:
       color: #fcf3e3
