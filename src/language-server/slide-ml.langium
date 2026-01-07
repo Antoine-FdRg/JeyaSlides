@@ -89,7 +89,12 @@ Code:
   'code:' 
   ('language:' language=STRING)?
   ('animated:' animated=BOOLEAN)?
-  'content:' content=STRING;
+  'content:' content=STRING
+  ('explanations:' 
+    explanations+=CodeExplanation+)?;
+
+CodeExplanation:
+  line=NUMBER"."content=STRING;
 
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
