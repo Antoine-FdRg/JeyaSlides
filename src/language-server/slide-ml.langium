@@ -169,14 +169,25 @@ Style:
 ;
 
 Size:
-  'size:'
+  'size:' 
+    (ShorthandSize | KeywordSize)
+;
+
+KeywordSize:
   (
-    ('width:' width=NUMBER) 
-    ('height:' height=NUMBER)?
+    ('width:' width=SizeValue) 
+    ('height:' height=SizeValue)?
   ) | (
-    ('width:' width=NUMBER)? 
-    ('height:' height=NUMBER)
-  );
+    ('width:' width=SizeValue)? 
+    ('height:' height=SizeValue)
+  )
+;
+
+ShorthandSize:
+  width=SizeValue height=SizeValue;
+
+SizeValue:
+  value=NUMBER('%')? | value='auto';
 
 Font:
   'font:'

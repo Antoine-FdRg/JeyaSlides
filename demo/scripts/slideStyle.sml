@@ -28,9 +28,7 @@ presentation:
         -text: 
           content: "Stretched block"
           style:
-            size:
-              width: 10
-              height: 10
+            size: 10 auto
             backgroundColor: #555
         -text: 
           content: "Normal block"
