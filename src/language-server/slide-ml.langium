@@ -169,22 +169,7 @@ Style:
 ;
 
 Size:
-  'size:' 
-    (ShorthandSize | KeywordSize)
-;
-
-KeywordSize:
-  (
-    ('width:' width=SizeValue) 
-    ('height:' height=SizeValue)?
-  ) | (
-    ('width:' width=SizeValue)? 
-    ('height:' height=SizeValue)
-  )
-;
-
-ShorthandSize:
-  width=SizeValue height=SizeValue;
+  'size:' width=SizeValue height=SizeValue;
 
 SizeValue:
   value=NUMBER('%')? | value='auto';

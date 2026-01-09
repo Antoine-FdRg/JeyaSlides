@@ -116,9 +116,7 @@ presentation:
         -text: 
           content: "large block in the back"
           style:
-            size:
-              width: 80
-              height: 30
+            size: 80 30
             backgroundColor: #555
             position:
               x: center
@@ -127,9 +125,7 @@ presentation:
         -text:
           content: "medium block at default depth"
           style:
-            size:
-              width: 38
-              height: 70
+            size: 38 70
             backgroundColor: #888
             position:
               x: right
@@ -137,9 +133,7 @@ presentation:
         -text:
           content: "small block in the front"
           style:
-            size:
-              width: 20
-              height: 10
+            size: 20 10
             backgroundColor: #bdbdbd
             position:
               x: center
@@ -148,9 +142,7 @@ presentation:
       elements:
         -group:
           style:
-            size:
-              width: 80
-              height: 80
+            size: 80 80
             backgroundColor: #ccc
             position:
               x: left
@@ -172,9 +164,7 @@ presentation:
                   y: center
             -group: 
               style:
-                size:
-                  width: 50
-                  height: 50
+                size: 50 50
                 backgroundColor: #888
                 position:
                   x: right

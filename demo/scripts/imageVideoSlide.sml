@@ -17,9 +17,7 @@ presentation:
         -video:
             link: "https://www.youtube.com/watch?v=l5Eu4XVwZZs"
             style:
-              size:
-                width: 50
-                height: 40
+              size: 50 40
               rotation: 10
 
     -slide:
@@ -38,9 +36,7 @@ presentation:
         -video:
             link: "videos/quantiqueVideo.mp4"
             style:
-              size:
-                width: 50
-                height: 20
+              size: 50 20
               rotation: 5
 
     -slide:
@@ -59,9 +55,7 @@ presentation:
         -image:
             link: "https://amphisciences.ouest-france.fr/wp-content/uploads/2024/10/AdobeStock_271324836-1280x640.jpeg"
             style:
-              size:
-                width: 70
-                height: 40
+              size: 70 40
               rotation: 5
 
     -slide:
@@ -80,7 +74,5 @@ presentation:
         -image:
             link: "images/quantique.webp"
             style:
-              size:
-                width: 70
-                height: 40
+              size: 70 40
               rotation: 5

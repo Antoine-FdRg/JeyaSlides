@@ -15,8 +15,7 @@ presentation:
             "
           align: justify
           style:
-            size:
-              width: 10
+            size: 10 auto
             font:
               size: 32
     -slide: 
