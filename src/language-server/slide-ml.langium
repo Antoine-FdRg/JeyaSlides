@@ -197,8 +197,8 @@ PlotType returns string:
   'scatter' | 'line' | 'bar';
 
 PlotData:
-  'x:' xValues=NumberArray
-  'y:' yValues=NumberArray
+  'xAxis:' xValues=NumberArray
+  'yAxis:' yValues=NumberArray
   ('labels:' labels=StringArray)?;
 
 NumberArray:

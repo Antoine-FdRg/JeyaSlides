@@ -19,8 +19,8 @@ presentation:
         -plot:
             type: scatter
             data:
-              x: [1, 2, 3, 4, 5]
-              y: [8, 10, 12, 15, 18]
+              xAxis: [1, 2, 3, 4, 5]
+              yAxis: [8, 10, 12, 15, 18]
               labels:
                 ["Student A", "Student B", "Student C", "Student D", "Student E"]
             layout:
