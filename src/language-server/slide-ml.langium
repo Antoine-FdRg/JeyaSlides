@@ -214,11 +214,18 @@ PlotLayout:
   ('yLabel:' yLabel=STRING)?;
 
 Position:
-  'position:' 
-    ('x' ':' x=XPosition)?
-    ('y' ':' y=YPosition)?
-    ('z' ':' z=ZPosition)?
-;
+  'position:'(ShorthandPosition | DetailedPosition);
+
+ShorthandPosition:
+  (general=FlatPosition | x=XPosition y=YPosition) ( z=ZPosition)?;
+
+FlatPosition returns string:
+  'center';
+
+DetailedPosition:
+  ('x' ':' x=XPosition)?
+  ('y' ':' y=YPosition)?
+  ('z' ':' z=ZPosition)?;
 
 XPosition:
   CoordinatePosition | EnumXPosition;

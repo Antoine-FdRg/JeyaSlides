@@ -40,9 +40,7 @@ presentation:
         -video:
             link: "https://www.youtube.com/watch?v=l5Eu4XVwZZs"
             style:
-              size:
-                width: 50
-                height: 40
+              size: 50 40
               rotation: 10
             animation:
               order: 1
@@ -74,9 +72,7 @@ presentation:
         -image:
             link: "https://amphisciences.ouest-france.fr/wp-content/uploads/2024/10/AdobeStock_271324836-1280x640.jpeg"
             style:
-              size:
-                width: 70
-                height: 40
+              size: 70 40
               rotation: 5
             animation:
               order: 1

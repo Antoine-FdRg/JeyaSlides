@@ -19,8 +19,6 @@ import {
   isImage,
   Video,
   isVideo,
-  XPosition,
-  YPosition,
   ZPosition,
   isCoordinatePosition,
   isBasicText,
@@ -29,6 +27,8 @@ import {
   Code,
   Plot,
   isPlot
+  isShorthandPosition,
+  CoordinatePosition,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -400,7 +400,9 @@ function generateSlide(
   const hasQuiz = slide.elements.some((e) => isQuiz(e));
   fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
   // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
-  fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 2%" >');
+  fileNode.append(
+    '<div class="slide-content" style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 2%" >',
+  );
 
   const templateElements = index === 0 ? template?.titleElements : template?.bodyElements;
 
@@ -420,7 +422,8 @@ function generateGroup(
   template?: TemplateContext,
 ) {
   const groupStyles = [...styles];
-  const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
+  const grpPos = group.position;
+  const hasPosition = grpPos && (grpPos.x || grpPos.y || grpPos.z); //TODO process general flat position
   if (!hasPosition) {
     groupStyles.unshift('position: relative;'); // position relative si le groupe n'a pas de position définie
   }
@@ -514,11 +517,30 @@ function getElementPosition(element: Element): string {
   if (!element.position) return '';
   let positionStyles: string[] = [];
   let transformStyles: string[] = [];
-  getXPosition(element.position.x, positionStyles, transformStyles);
-  getYPosition(element.position.y, positionStyles, transformStyles);
+  let X: string | CoordinatePosition = element.position.x
+    ? isCoordinatePosition(element.position.x)
+      ? element.position.x
+      : (element.position.x as any).$cstNode
+        ? (element.position.x as any).$cstNode.text?.trim()
+        : undefined
+    : undefined;
+  let Y: string | CoordinatePosition = element.position.y
+    ? isCoordinatePosition(element.position.y)
+      ? element.position.y
+      : (element.position.y as any).$cstNode
+        ? (element.position.y as any).$cstNode.text?.trim()
+        : undefined
+    : undefined;
+  if (isShorthandPosition(element.position) && element.position.general === 'center') {
+    X = 'center';
+    Y = 'center';
+    console.log('[Position] Shorthand "center" expanded to x=center, y=center');
+  }
+  getXPosition(X, positionStyles, transformStyles);
+  getYPosition(Y, positionStyles, transformStyles);
   getZPosition(element.position.z, positionStyles);
 
-  if (positionStyles.length > 0) {
+  if (X || Y) {
     positionStyles.unshift('position: absolute;'); // position absolute si une position est définie pour positionner par rapport au conteneur parent
   }
 
@@ -533,27 +555,25 @@ function getElementPosition(element: Element): string {
    * @param styles la liste des styles
    * @param transformStyles la liste des styles de transformation
    */
-  function getXPosition(x: XPosition | undefined, styles: string[], transformStyles: string[]) {
+  function getXPosition(x: string | CoordinatePosition | undefined, styles: string[], transformStyles: string[]) {
     if (!x) return;
-    if (isCoordinatePosition(x)) {
-      if (x.value !== undefined) {
-        styles.push(`left: ${x.value}%;`);
+    if (isCoordinatePosition(x) && x.value !== undefined) {
+      styles.push(`left: ${x.value}%;`);
+      transformStyles.push('translateX(-50%)');
+      return;
+    }
+    console.log('[Position] Processing X position value:', x);
+    switch (x) {
+      case 'left':
+        styles.push('left: 2%;');
+        break;
+      case 'center':
+        styles.push('left: 50%;');
         transformStyles.push('translateX(-50%)');
-      }
-    } else {
-      const value = (x as any).$cstNode?.text?.trim();
-      switch (value) {
-        case 'left':
-          styles.push('left: 2%;');
-          break;
-        case 'center':
-          styles.push('left: 50%;');
-          transformStyles.push('translateX(-50%)');
-          break;
-        case 'right':
-          styles.push('right: 2%;');
-          break;
-      }
+        break;
+      case 'right':
+        styles.push('right: 2%;');
+        break;
     }
   }
 
@@ -563,27 +583,24 @@ function getElementPosition(element: Element): string {
    * @param styles la liste des styles
    * @param transformStyles la liste des styles de transformation
    */
-  function getYPosition(y: YPosition | undefined, styles: string[], transformStyles: string[]) {
+  function getYPosition(y: string | CoordinatePosition | undefined, styles: string[], transformStyles: string[]) {
     if (!y) return;
-    if (isCoordinatePosition(y)) {
-      if (y.value !== undefined) {
-        styles.push(`top: ${y.value}%;`);
+    if (isCoordinatePosition(y) && y.value !== undefined) {
+      styles.push(`top: ${y.value}%;`);
+      transformStyles.push('translateY(-50%)');
+    }
+    switch (y) {
+      case 'top':
+        styles.push('top: 2%;');
+        break;
+      case 'center':
+        styles.push('top: 50%;');
         transformStyles.push('translateY(-50%)');
-      }
-    } else {
-      const value = (y as any).$cstNode?.text?.trim();
-      switch (value) {
-        case 'top':
-          styles.push('top: 2%;');
-          break;
-        case 'center':
-          styles.push('top: 50%;');
-          transformStyles.push('translateY(-50%)');
-          break;
-        case 'bottom':
-          styles.push('bottom: 2%;');
-          break;
-      }
+        break;
+      case 'bottom':
+        styles.push('bottom: 2%;');
+        transformStyles.push('translateY(-100%)');
+        break;
     }
   }
 
@@ -868,7 +885,7 @@ function generateList(
   fileNode.append(`<${tag} style="${listStyles.join(' ')}">`);
   for (const item of listNode.items ?? []) {
     const raw = sanitizeStringLiteral(item);
-    const html = markdownToHtml(raw); 
+    const html = markdownToHtml(raw);
     fileNode.append(`<li>${html}</li>`);
   }
   fileNode.append(`</${tag}>`);

@@ -3,7 +3,7 @@ presentation:
     -slide:
       elements:
         -text: 
-          content: "Default position"
+          content: "Default position is top at the center"
           style:
             backgroundColor: #f14b4b
     -slide:
@@ -14,9 +14,7 @@ presentation:
           content: "Positioned at x left, y top"
           style:
             backgroundColor: #4bf14b
-            position:
-              x: left
-              y: top
+            position: left top
         -text:
           content: "Positioned at x center, y top"
           style:
@@ -42,9 +40,7 @@ presentation:
           content: "Positioned at x center, y center"
           style:
             backgroundColor: #d8f14b
-            position:
-              x: center
-              y: center
+            position: center
         -text:
           content: "Positioned at x right, y center"
           style:
@@ -70,9 +66,7 @@ presentation:
           content: "Positioned at x right, y bottom"
           style:
             backgroundColor: #b41ff1
-            position:
-              x: right
-              y: bottom
+            position: right bottom
     -slide:
       elements:
         -title: 
@@ -92,9 +86,7 @@ presentation:
           content: "(70, 40)"
           style:
             backgroundColor: #d8f14b
-            position:
-              x: 70
-              y: 40
+            position: 70 40
         -text:
           content: "(40, 60)"
           style:
@@ -106,9 +98,7 @@ presentation:
           content: "(80, 90)"
           style:
             backgroundColor: #f1a14b
-            position:
-              x: 80
-              y: 90
+            position: 80 90
     -slide:
       elements:
         -title: 
@@ -135,9 +125,7 @@ presentation:
           style:
             size: 20 10
             backgroundColor: #bdbdbd
-            position:
-              x: center
-              y: center
+            position: center center front
     -slide:
       elements:
         -group:
@@ -166,6 +154,8 @@ presentation:
               style:
                 size: 50 50
                 backgroundColor: #888
+                font:
+                  color: "lightgrey"
                 position:
                   x: right
                   y: bottom
