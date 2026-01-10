@@ -67,7 +67,7 @@ Slide:
 ;
 
 Element:
-  Text | Image | Video | Quiz | Group;
+  Text | Image | Video | Quiz | Group | Plot;
 
 Group:
   'group:'
@@ -186,6 +186,32 @@ Font:
 
 terminal FontTransformation: 'bold' | 'italic' | 'underline';
 
+Plot:
+  'plot:'
+    'type:' plotType=PlotType
+    'data:' plotData=PlotData
+    ('layout:' plotLayout=PlotLayout)?
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?;
+
+PlotType returns string:
+  'scatter' | 'line' | 'bar';
+
+PlotData:
+  'xAxis:' xValues=NumberArray
+  'yAxis:' yValues=NumberArray
+  ('labels:' labels=StringArray)?;
+
+NumberArray:
+  '[' values+=NUMBER (',' values+=NUMBER)* ']';
+
+StringArray:
+  '[' values+=STRING (',' values+=STRING)* ']';
+
+PlotLayout:
+  ('xLabel:' xLabel=STRING)?
+  ('yLabel:' yLabel=STRING)?;
 
 Position:
   'position:' 
