@@ -14,6 +14,7 @@ import {
   Paragraph,
   isParagraph,
   isList,
+  List,
   Image,
   isImage,
   Video,
@@ -776,6 +777,26 @@ function getMimeTypeFromFilename(filename: string): string {
   }
 }
 
+function generateList(
+  listNode: List,
+  fileNode: CompositeGeneratorNode,
+  elementStyle: any,
+  template?: TemplateContext,
+  styles: String[] = [],
+) {
+  const ordered = (listNode as any).ordered === true || (listNode as any).ordered === 'true';
+  const tag = ordered ? 'ol' : 'ul';
+  const resolvedTextStyles = resolveTextStyles('text', elementStyle, template);
+  const listStyles = ['margin: 5vw;', 'padding-left: 1.2em;', ...styles, ...resolvedTextStyles];
+  fileNode.append(`<${tag} style="${listStyles.join(' ')}">`);
+  for (const item of listNode.items ?? []) {
+    const raw = sanitizeStringLiteral(item);
+    const html = markdownToHtml(raw);
+    fileNode.append(`<li>${html}</li>`);
+  }
+  fileNode.append(`</${tag}>`);
+}
+
 function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: String[]) {
   const srcRaw = copyLocalAssetIfNeeded(image.link);
   const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
@@ -829,12 +850,33 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
   } else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
   } else if (isList(text)) {
-    // TODO
+    generateList(text as any, fileNode, text.style, template, styles);
   } else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
   fileNode.append('</div>');
+}
+
+function markdownToHtml(markdown: string): string {
+  if (!markdown) return '';
+  let html = markdown;
+
+  // Bold **text**
+  html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  // Italic *text*
+  html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+  // Underline __text__
+  html = html.replace(/__(.+?)__/g, '<u>$1</u>');
+  // Strikethrough ~~text~~
+  html = html.replace(/~~(.+?)~~/g, '<s>$1</s>');
+  // Inline code `code`
+  html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+  // Links [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  // Line breaks
+  html = html.replace(/\n/g, '<br/>');
+  return html;
 }
 
 function generateParagraph(
@@ -852,25 +894,4 @@ function generateParagraph(
       ${paragraph.content}
      </${tag}>`,
   );
-  
-  function markdownToHtml(markdown: string): string {
-    if (!markdown) return '';
-    let html = markdown;
-
-    // Bold **text**
-    html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    // Italic *text*
-    html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
-    // Underline __text__
-    html = html.replace(/__(.+?)__/g, '<u>$1</u>');
-    // Strikethrough ~~text~~
-    html = html.replace(/~~(.+?)~~/g, '<s>$1</s>');
-    // Inline code `code`
-    html = html.replace(/`(.+?)`/g, '<code>$1</code>');
-    // Links [text](url)
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    // Line breaks
-    html = html.replace(/\n/g, '<br/>');
-    return html;
-  }
 }
