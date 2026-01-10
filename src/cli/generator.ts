@@ -462,11 +462,11 @@ function getElementStyles(element: Element): string[] {
   function getSizeStyles(element: Element): string[] | undefined {
     let sizeStyles: string[] = [];
     if (!element.style?.size) return;
-    if (element.style.size.width) {
-      sizeStyles.push(`width: ${element.style.size.width}%;`);
+    if (element.style.size.width && element.style.size.width.value != 'auto') {
+      sizeStyles.push(`width: ${element.style.size.width.value}%;`);
     }
-    if (element.style.size.height) {
-      sizeStyles.push(`height: ${element.style.size.height}%;`);
+    if (element.style.size.height && element.style.size.height.value != 'auto') {
+      sizeStyles.push(`height: ${element.style.size.height.value}%;`);
     }
     return sizeStyles;
   }

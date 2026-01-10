@@ -27,9 +27,7 @@ presentation:
         -text: 
           content: "test convex à fast"
           style:
-            size:
-              width: 70
-              height: 70
+            size: 70 70
             backgroundColor: #0bac0b
             
 
@@ -41,9 +39,7 @@ presentation:
         -text: 
           content: "Test concave à default"
           style:
-            size:
-              width: 10
-              height: 10
+            size: 10 10
             backgroundColor: #555
         
 
@@ -55,8 +51,7 @@ presentation:
         -text: 
             content: "test transition slide slow"
             style:
-            size:
-                width: 70
+            size: 70 auto
             backgroundColor: #888
 
     -slide:

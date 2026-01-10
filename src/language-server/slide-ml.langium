@@ -169,14 +169,10 @@ Style:
 ;
 
 Size:
-  'size:'
-  (
-    ('width:' width=NUMBER) 
-    ('height:' height=NUMBER)?
-  ) | (
-    ('width:' width=NUMBER)? 
-    ('height:' height=NUMBER)
-  );
+  'size:' width=SizeValue height=SizeValue;
+
+SizeValue:
+  value=NUMBER('%')? | value='auto';
 
 Font:
   'font:'

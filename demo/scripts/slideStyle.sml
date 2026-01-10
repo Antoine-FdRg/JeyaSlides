@@ -18,9 +18,7 @@ presentation:
         -text: 
           content: "Rotated colored wide block"
           style:
-            size:
-              width: 70
-              height: 70
+            size: 70 70
             backgroundColor: #0bac0b
             rotation: 45
     -slide:
@@ -28,9 +26,7 @@ presentation:
         -text: 
           content: "Stretched block"
           style:
-            size:
-              width: 10
-              height: 10
+            size: 10 auto
             backgroundColor: #555
         -text: 
           content: "Normal block"
@@ -39,34 +35,29 @@ presentation:
         -text: 
           content: "Wide block"
           style:
-            size:
-              width: 80
+            size: 80 auto
             backgroundColor: #aaa
     -slide:
       elements:
         -group:
           style:
-            size:
-              width: 100
+            size: 100 auto
           backgroundColor: #ccc
           elements:
             -text: 
               content: "30% width of the parent group"
               style:
-                size:
-                  width: 30
+                size: 30 auto
                 backgroundColor: #888
             -text: 
               content: "50% width of the parent group"
               style:
-                size:
-                  width: 50
+                size: 50 auto
                 backgroundColor: #888
             -text: 
               content: "70% width of the parent group"
               style:
-                size:
-                  width: 70
+                size: 70 auto
                 backgroundColor: #888
     -slide:
       elements:
