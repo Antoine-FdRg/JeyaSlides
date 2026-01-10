@@ -1,5 +1,5 @@
 import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
-import { JeyaSlidesAstType, Template } from './generated/ast';
+import { JeyaSlidesAstType, Plot, Template } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
 export function registerValidationChecks(services: SlideMLServices) {
@@ -11,6 +11,7 @@ export function registerValidationChecks(services: SlideMLServices) {
     Presentation: validator.validate,
     Slide: validator.validate,
     Element: validator.validate,
+    Plot: validator.validatePlot,
     Font: validator.validateNotEmpty,
     Style: validator.validateNotEmpty,
     Position: validator.validateNotEmpty,
@@ -288,4 +289,43 @@ export class SlideMLValidator {
       );
     }
   }
+
+  validatePlot(node: AstNode, accept: ValidationAcceptor): void {
+    const plot = node as Plot;
+
+    const data = plot.plotData;
+    if (!data) {
+      accept('error', 'Un plot doit définir un bloc data.', { node });
+      return;
+    }
+
+    const x = data.xValues?.values ?? [];
+    const y = data.yValues?.values ?? [];
+
+    if (x.length === 0) {
+      accept('error', 'Le tableau x du plot ne doit pas être vide.', { node });
+    }
+
+    if (y.length === 0) {
+      accept('error', 'Le tableau y du plot ne doit pas être vide.', { node });
+    }
+
+    if (x.length > 0 && y.length > 0 && x.length !== y.length) {
+      accept(
+        'error',
+        `Les tableaux x (${x.length}) et y (${y.length}) doivent avoir la même taille.`,
+        { node }
+      );
+    }
+
+    const labels = data.labels?.values;
+    if (labels && labels.length !== x.length) {
+      accept(
+        'warning',
+        `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`,
+        { node }
+      );
+    }
+  }
+
 }
