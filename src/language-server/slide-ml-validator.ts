@@ -17,6 +17,7 @@ export function registerValidationChecks(services: SlideMLServices) {
     Position: validator.validateNotEmpty,
     XPosition: validator.validatePosition,
     YPosition: validator.validatePosition,
+    Size: validator.validateUsefullSize,
   };
 
   registry.register(checks, validator);
@@ -277,16 +278,24 @@ export class SlideMLValidator {
 
     const hasTitle = !!template.titleTemplate;
     const hasBody = !!template.bodyTemplate;
-    const hasTextStyles =
-      !!template.defaults?.textStyles &&
-      template.defaults.textStyles.entries.length > 0;
+    const hasTextStyles = !!template.defaults?.textStyles && template.defaults.textStyles.entries.length > 0;
 
     if (!hasTitle && !hasBody && !hasTextStyles) {
-      accept(
-        'error',
-        'Un template doit définir au moins un titleTemplate, un bodyTemplate ou des textStyles.',
-        { node: template }
-      );
+      accept('error', 'Un template doit définir au moins un titleTemplate, un bodyTemplate ou des textStyles.', {
+        node: template,
+      });
+    }
+  }
+
+  validateUsefullSize(node: AstNode, accept: ValidationAcceptor): void {
+    const size = node as any;
+    if (size.width && size.height) {
+      const widthIsAuto = typeof size.width.value === 'string' && size.width.value === 'auto';
+      const heightIsAuto = typeof size.height.value === 'string' && size.height.value === 'auto';
+
+      if (widthIsAuto && heightIsAuto) {
+        accept('warning', 'Définir width et height tous les deux à "auto" est inutile.', { node });
+      }
     }
   }
 

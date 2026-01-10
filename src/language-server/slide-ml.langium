@@ -87,8 +87,14 @@ Text:
 
 Code:
   'code:' 
-  'language:' language=STRING 
-  'content:' content=STRING;
+  ('language:' language=STRING)?
+  ('animated:' animated=BOOLEAN)?
+  'content:' content=STRING
+  ('explanations:' 
+    explanations+=CodeExplanation+)?;
+
+CodeExplanation:
+  '-' line=NUMBER ":" content=STRING;
 
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
@@ -163,14 +169,10 @@ Style:
 ;
 
 Size:
-  'size:'
-  (
-    ('width:' width=NUMBER) 
-    ('height:' height=NUMBER)?
-  ) | (
-    ('width:' width=NUMBER)? 
-    ('height:' height=NUMBER)
-  );
+  'size:' width=SizeValue height=SizeValue;
+
+SizeValue:
+  value=NUMBER('%')? | value='auto';
 
 Font:
   'font:'
