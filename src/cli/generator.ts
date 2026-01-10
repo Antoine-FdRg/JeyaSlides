@@ -400,7 +400,7 @@ function generateSlide(
   const hasQuiz = slide.elements.some((e) => isQuiz(e));
   fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
   // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
-  fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%;">');
+  fileNode.append('<div class="slide-content" style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 2%" >');
 
   const templateElements = index === 0 ? template?.titleElements : template?.bodyElements;
 

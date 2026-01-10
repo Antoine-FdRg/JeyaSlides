@@ -82,28 +82,28 @@ presentation:
           style:
             backgroundColor: #f14b4b
         -text: 
-          content: "Positioned at (20, 30)"
+          content: "(20, 30)"
           style:
             backgroundColor: #4bf14b
             position:
-              x: -20
-              y: 300
+              x: 20
+              y: 30
         -text:
-          content: "Positioned at (50, 50)"
+          content: "(70, 40)"
           style:
             backgroundColor: #d8f14b
             position:
-              x: 50
-              y: 50
+              x: 70
+              y: 40
         -text:
-          content: "Positioned at (50, 70)"
+          content: "(40, 60)"
           style:
             backgroundColor: #4b4bf1
             position:
-              x: 50
-              y: 70
+              x: 40
+              y: 60
         -text:
-          content: "Positioned at (80, 90)"
+          content: "(80, 90)"
           style:
             backgroundColor: #f1a14b
             position:
@@ -175,7 +175,7 @@ presentation:
                 style:
                   backgroundColor: #522
                   position:
-                    x: -50
+                    x: 50
                     y: top
                 -text: 
                   content: "left 50 in the parent group"
