@@ -26,3 +26,6 @@ presentation:
             layout:
               xLabel: "Study hours"
               yLabel: "Test score"
+            position:
+              x: center
+              y: center
