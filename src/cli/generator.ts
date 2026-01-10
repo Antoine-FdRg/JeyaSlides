@@ -26,6 +26,8 @@ import {
   isBasicText,
   isQuiz,
   Quiz,
+  Plot,
+  isPlot
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -36,6 +38,7 @@ const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
 const DEFAULT_TEXT_STYLE = 'margin: 0;';
 const ZINDEX_BACK_VALUE = -10;
 const ZINDEX_FRONT_VALUE = 100;
+let PLOT_COUNTER = 0;
 
 export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
   const data = extractDestinationAndName(filePath, destination);
@@ -80,6 +83,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
   body { font-family: Arial, sans-serif; }
 
@@ -246,6 +250,9 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   Reveal.on('slidechanged', function (event) {
     // ne rend que la slide courante
     renderQuizQRCodes(event.currentSlide);
+    if (window.Plotly) {
+      Plotly.Plots.resize(event.currentSlide);
+    }
   });
 </script>
 
@@ -393,6 +400,7 @@ function generateElement(element: Element, fileNode: CompositeGeneratorNode, tem
   if (isImage(element)) return generateImage(element, fileNode, styles);
   if (isVideo(element)) return generateVideo(element, fileNode, styles);
   if (isQuiz(element)) return generateQuiz(element, fileNode, styles);
+  if (isPlot(element)) return generatePlot(element, fileNode, styles);
   throw new Error(`Unhandled element type: ${(element as Element).$type}`);
 }
 
@@ -894,4 +902,56 @@ function generateParagraph(
       ${paragraph.content}
      </${tag}>`,
   );
+}
+
+function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: String[]) {
+
+  const plotId = `plot_${PLOT_COUNTER++}`;
+
+  fileNode.append(`<div class="plot-container"`);
+
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+
+  fileNode.append(`>`);
+  fileNode.append(`<div id="${plotId}" style="width:100%; height:100%;"></div>`);
+  fileNode.append(`</div>`);
+
+  const x = plot.plotData?.xValues?.values ?? [];
+  const y = plot.plotData?.yValues?.values ?? [];
+  const labels = plot.plotData?.labels?.values ?? [];
+
+  const hasLabels = labels.length > 0;
+
+  const plotType = plot.plotType;
+  const xLabel = plot.plotLayout?.xLabel;
+  const yLabel = plot.plotLayout?.yLabel;
+
+  const hoverTemplate = hasLabels
+    ? "%{text}<br>Study hours: %{x}<br>Score: %{y}<extra></extra>"
+    : "Study hours: %{x}<br>Score: %{y}<extra></extra>";
+
+  fileNode.append(`
+<script>
+(function () {
+  const trace = {
+    x: ${JSON.stringify(x)},
+    y: ${JSON.stringify(y)},
+    type: "${plotType}",
+    mode: "${plotType === 'scatter' ? 'markers' : 'lines'}",
+    ${hasLabels ? `text: ${JSON.stringify(labels)},` : ''}
+    hovertemplate: ${JSON.stringify(hoverTemplate)}
+  };
+
+  const layout = {
+    margin: { t: 20 },
+    ${xLabel ? `xaxis: { title: ${JSON.stringify(xLabel)} },` : ''}
+    ${yLabel ? `yaxis: { title: ${JSON.stringify(yLabel)} },` : ''}
+  };
+
+  Plotly.newPlot("${plotId}", [trace], layout, { responsive: true });
+})();
+</script>
+`);
 }
