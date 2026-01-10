@@ -52,17 +52,17 @@ presentation:
           content: "Line animated Code"
         - code:
             language: "javascript"
-            // animated: true
+            animated: true
             content: 
               "
               const x = 1;
               const y = 2;
               const z = x + y;
               "
-            // explanations:
-            //   1. "Declares a constant x with value 1"
-            //   2. "Declares a constant y with value 2"
-            //   3. "Declares a constant z as the sum of x and y"
+            explanations:
+              - 1: "Declares a constant x with value 1"
+              - 2: "Declares a constant y with value 2"
+              - 3: "Declares a constant z as the sum of x and y"
     -slide:
       elements:
         -text:

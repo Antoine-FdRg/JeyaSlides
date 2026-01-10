@@ -94,7 +94,7 @@ Code:
     explanations+=CodeExplanation+)?;
 
 CodeExplanation:
-  line=NUMBER"."content=STRING;
+  '-' line=NUMBER ":" content=STRING;
 
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;

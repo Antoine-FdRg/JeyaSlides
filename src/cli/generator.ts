@@ -877,7 +877,7 @@ function generateImage(
   const srcRaw = copyLocalAssetIfNeeded(image.link);
   const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
   const classAttr = animationClass ? `class="image ${animationClass}"` : 'class="image"';
-  fileNode.append(`<div ${classAttr} ${animationAttributes}><img src="${src} " alt="image" `);
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><img src="${src}" alt="image" `);
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }
@@ -909,7 +909,7 @@ function generateVideo(
   const src = copyLocalAssetIfNeeded(raw);
   const videoSrc = isRemoteLink(src) ? encodeURI(src) : src.replaceAll('\\', '/');
   const mime = getMimeTypeFromFilename(videoSrc);
-  fileNode.append(`<div ${classAttr}><video controls `);
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><video controls `);
   if (styles.length > 0) {
     fileNode.append(`style="${styles.join(' ')}"`);
   }
