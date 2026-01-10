@@ -26,6 +26,7 @@ import {
   isBasicText,
   isQuiz,
   Quiz,
+  Code,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -80,6 +81,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
     <style>
   body { font-family: Arial, sans-serif; }
 
@@ -164,6 +166,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
     <script src="https://unpkg.com/tldreveal/dist/bundle/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"><\/script>
     <script>
       // Open an image in a fullscreen overlay. Accepts an HTMLImageElement or a URL string.
       function openImageFullscreen(srcOrElem) {
@@ -203,7 +206,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
           disableLayout: true,
           slideNumber: ${presentation.displaySlideNumber ?? false},
           scrollActivationWidth: undefined,
-          plugins: [Tldreveal.Tldreveal()],
+          plugins: [Tldreveal.Tldreveal(), RevealHighlight],
           tldreveal: {
             disableLayoutWarning: false,
           },
@@ -248,7 +251,45 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     renderQuizQRCodes(event.currentSlide);
   });
 </script>
-
+    <script>
+      // Synchronize code explanations with Reveal.js fragments
+      function updateCodeExplanations() {
+        const currentSlide = document.querySelector('section.present');
+        if (!currentSlide) return;
+        
+        // Get the current fragment index from data-fragment attribute
+        const fragmentAttr = currentSlide.getAttribute('data-fragment');
+        const currentFragment = fragmentAttr ? parseInt(fragmentAttr) : -1;
+        
+        // Find all explanation elements in the current slide
+        const explanations = currentSlide.querySelectorAll('[class*="explain-"]');
+        
+        explanations.forEach(el => {
+          // Extract the line number from class like "explain-1", "explain-2", etc.
+          const match = el.className.match(/explain-(\\d+)/);
+          if (match) {
+            const lineNumber = parseInt(match[1]);
+            if (currentFragment >= lineNumber-2) {
+              el.style.opacity = '1';
+              el.style.visibility = 'visible';
+            } else {
+              el.style.opacity = '0';
+              el.style.visibility = 'hidden';
+            }
+          }
+        });
+      }
+      
+      // Initialize explanations on ready
+      Reveal.on('ready', updateCodeExplanations);
+      
+      // Update on slide change
+      Reveal.on('slidechanged', updateCodeExplanations);
+      
+      // Update on fragment shown/hidden
+      Reveal.on('fragmentshown', updateCodeExplanations);
+      Reveal.on('fragmenthidden', updateCodeExplanations);
+    <\/script>
 
   </body>
   </html>`);
@@ -364,14 +405,22 @@ function generateSlide(
   fileNode.append('</section>');
 }
 
-function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
+function generateGroup(
+  group: Group,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+  template?: TemplateContext,
+) {
   const groupStyles = [...styles];
   const hasPosition = group.position && (group.position.x || group.position.y || group.position.z);
   if (!hasPosition) {
     groupStyles.unshift('position: relative;'); // position relative si le groupe n'a pas de position définie
   }
-
-  fileNode.append('<div class="group"');
+  const animationClass = animationData?.classes || '';
+  const classAttr = animationClass ? `class="group ${animationClass}"` : 'class="group"';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
   if (groupStyles.length > 0) {
     fileNode.append(` style="${groupStyles.join(' ')}"`);
   }
@@ -386,18 +435,19 @@ function generateGroup(group: Group, fileNode: CompositeGeneratorNode, styles: S
 }
 
 function generateElement(element: Element, fileNode: CompositeGeneratorNode, template?: TemplateContext) {
-  const styles: String[] = getElementStyles(element);
+  const styles: string[] = getElementStyles(element);
   styles.push(getElementPosition(element));
-  if (isGroup(element)) return generateGroup(element, fileNode, styles, template);
-  if (isText(element)) return generateText(element, fileNode, styles, template);
-  if (isImage(element)) return generateImage(element, fileNode, styles);
-  if (isVideo(element)) return generateVideo(element, fileNode, styles);
-  if (isQuiz(element)) return generateQuiz(element, fileNode, styles);
+  const animationData = getElementAnimation(element);
+  if (isGroup(element)) return generateGroup(element, fileNode, styles, animationData, template);
+  if (isText(element)) return generateText(element, fileNode, styles, animationData, template);
+  if (isImage(element)) return generateImage(element, fileNode, styles, animationData);
+  if (isVideo(element)) return generateVideo(element, fileNode, styles, animationData);
+  if (isQuiz(element)) return generateQuiz(element, fileNode, styles, animationData);
   throw new Error(`Unhandled element type: ${(element as Element).$type}`);
 }
 
-function getElementStyles(element: Element): String[] {
-  const styles: String[] = [...DEFAULT_ELEMENT_STYLES];
+function getElementStyles(element: Element): string[] {
+  const styles: string[] = [...DEFAULT_ELEMENT_STYLES];
   if (!element.style) return styles;
   if (element.style.backgroundColor) {
     styles.push(`background-color: ${element.style.backgroundColor};`);
@@ -409,8 +459,8 @@ function getElementStyles(element: Element): String[] {
   styles.push(...(getFontStyles(element) || []));
   return styles;
 
-  function getSizeStyles(element: Element): String[] | undefined {
-    let sizeStyles: String[] = [];
+  function getSizeStyles(element: Element): string[] | undefined {
+    let sizeStyles: string[] = [];
     if (!element.style?.size) return;
     if (element.style.size.width) {
       sizeStyles.push(`width: ${element.style.size.width}%;`);
@@ -421,8 +471,8 @@ function getElementStyles(element: Element): String[] {
     return sizeStyles;
   }
 
-  function getFontStyles(element: Element): String[] | undefined {
-    let fontStyles: String[] = [];
+  function getFontStyles(element: Element): string[] | undefined {
+    let fontStyles: string[] = [];
     if (!element.style?.font) return;
     if (element.style.font.name) {
       fontStyles.push(`font-family: ${element.style.font.name};`);
@@ -452,10 +502,10 @@ function getElementStyles(element: Element): String[] {
   }
 }
 
-function getElementPosition(element: Element): String {
+function getElementPosition(element: Element): string {
   if (!element.position) return '';
-  let positionStyles: String[] = [];
-  let transformStyles: String[] = [];
+  let positionStyles: string[] = [];
+  let transformStyles: string[] = [];
   getXPosition(element.position.x, positionStyles, transformStyles);
   getYPosition(element.position.y, positionStyles, transformStyles);
   getZPosition(element.position.z, positionStyles);
@@ -475,7 +525,7 @@ function getElementPosition(element: Element): String {
    * @param styles la liste des styles
    * @param transformStyles la liste des styles de transformation
    */
-  function getXPosition(x: XPosition | undefined, styles: String[], transformStyles: String[]) {
+  function getXPosition(x: XPosition | undefined, styles: string[], transformStyles: string[]) {
     if (!x) return;
     if (isCoordinatePosition(x)) {
       if (x.value !== undefined) {
@@ -505,7 +555,7 @@ function getElementPosition(element: Element): String {
    * @param styles la liste des styles
    * @param transformStyles la liste des styles de transformation
    */
-  function getYPosition(y: YPosition | undefined, styles: String[], transformStyles: String[]) {
+  function getYPosition(y: YPosition | undefined, styles: string[], transformStyles: string[]) {
     if (!y) return;
     if (isCoordinatePosition(y)) {
       if (y.value !== undefined) {
@@ -534,7 +584,7 @@ function getElementPosition(element: Element): String {
    * @param z la position en Z
    * @param styles la liste des styles
    */
-  function getZPosition(z: ZPosition | undefined, styles: String[]) {
+  function getZPosition(z: ZPosition | undefined, styles: string[]) {
     if (!z) return;
     if (isCoordinatePosition(z)) {
       if (z.value !== undefined) {
@@ -552,6 +602,24 @@ function getElementPosition(element: Element): String {
       }
     }
   }
+}
+
+function sanitizeLink(link: string) {
+  if (!link) return '';
+  if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
+  if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
+  return link;
+}
+
+interface AnimationData {
+  classes?: string;
+  attributes?: string;
+}
+function getElementAnimation(element: Element): AnimationData | undefined {
+  if (!element.animation) return undefined;
+  const animation = element.animation;
+  const order = animation.order;
+  return { classes: `fragment`, attributes: `data-fragment-index="${order}"` };
 }
 
 //Quiz helpers
@@ -693,8 +761,15 @@ function displayPersonnalisedQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNo
   fileNode.append('</div>');
 }
 
-function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: String[]) {
-  fileNode.append('<div class="quiz-wrap" onclick="event.stopPropagation()">');
+function generateQuiz(
+  quizNode: Quiz,
+  fileNode: CompositeGeneratorNode,
+  styles: String[],
+  animationData: AnimationData | undefined,
+) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div class="quiz-wrap ${animationClass}" ${animationAttributes} onclick="event.stopPropagation()">`);
 
   if (quizNode.link) {
     displayOnlineQuiz(quizNode, fileNode);
@@ -708,12 +783,6 @@ function generateQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode, styles: 
 
   fileNode.append('<!-- Quiz node: no link and no personalisedQuiz -->');
   fileNode.append('</div>');
-}
-function sanitizeLink(link: string) {
-  if (!link) return '';
-  if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
-  if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
-  return link;
 }
 
 function isRemoteLink(link: string) {
@@ -791,27 +860,43 @@ function generateList(
   fileNode.append(`<${tag} style="${listStyles.join(' ')}">`);
   for (const item of listNode.items ?? []) {
     const raw = sanitizeStringLiteral(item);
-    const html = markdownToHtml(raw);
+    const html = markdownToHtml(raw); 
     fileNode.append(`<li>${html}</li>`);
   }
   fileNode.append(`</${tag}>`);
 }
 
-function generateImage(image: Image, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateImage(
+  image: Image,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
   const srcRaw = copyLocalAssetIfNeeded(image.link);
   const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
-  fileNode.append(`<div class="image"><img src="${src}" alt="image" `);
+  const classAttr = animationClass ? `class="image ${animationClass}"` : 'class="image"';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><img src="${src}" alt="image" `);
   if (styles.length > 0) {
     fileNode.append(` style="${styles.join(' ')}"`);
   }
   fileNode.append(` onclick="openImageFullscreen(this)" onerror="this.style.display='none'"/></div>`);
 }
 
-function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: String[]) {
+function generateVideo(
+  video: Video,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
   const raw = sanitizeLink(video.link);
+  const classAttr = animationClass ? `class="video ${animationClass}"` : 'class="video"';
   const ytEmbed = getYouTubeEmbed(raw);
   if (ytEmbed) {
-    fileNode.append(`<div class="video"><iframe `);
+    fileNode.append(`<div ${classAttr} ${animationAttributes}><iframe `);
     if (styles.length > 0) {
       fileNode.append(`style="${styles.join(' ')}"`); //TODO: adapt size according to styles width="960" height="540"
     }
@@ -824,7 +909,7 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   const src = copyLocalAssetIfNeeded(raw);
   const videoSrc = isRemoteLink(src) ? encodeURI(src) : src.replaceAll('\\', '/');
   const mime = getMimeTypeFromFilename(videoSrc);
-  fileNode.append(`<div class="video"><video controls `);
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><video controls `);
   if (styles.length > 0) {
     fileNode.append(`style="${styles.join(' ')}"`);
   }
@@ -833,8 +918,17 @@ function generateVideo(video: Video, fileNode: CompositeGeneratorNode, styles: S
   );
 }
 
-function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: String[], template?: TemplateContext) {
-  fileNode.append('<div class="text"');
+function generateText(
+  text: Text,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+  template?: TemplateContext,
+) {
+  const animationClass = animationData?.classes || '';
+  const classAttr = animationClass ? `class="text ${animationClass}"` : 'class="text"';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
 
   if (isBasicText(text) && text.align) {
     styles.push(`display:flex; justify-content:${text.align};`);
@@ -846,7 +940,7 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
   fileNode.append('>');
 
   if (isCode(text)) {
-    // TODO
+    generateCode(text, fileNode);
   } else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
   } else if (isList(text)) {
@@ -856,6 +950,58 @@ function generateText(text: Text, fileNode: CompositeGeneratorNode, styles: Stri
   }
 
   fileNode.append('</div>');
+}
+
+function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
+  const lang = code.language ? code.language : 'plaintext';
+  const hasExplanations = code.explanations && code.explanations.length > 0;
+  if (code.animated && hasExplanations) {
+    generateExplainedCode(code, lang, fileNode, true);
+    return;
+  }
+  if (code.animated) {
+    generateCodeBlock(code.content, lang, fileNode, true);
+    return;
+  }
+  if (hasExplanations) {
+    generateExplainedCode(code, lang, fileNode);
+    return;
+  }
+  generateCodeBlock(code.content, lang, fileNode);
+
+  function generateExplainedCode(code: Code, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+    fileNode.append(
+      '<div class="group" style="display: flex; flex-direction: row; align-items: center; min-width: 800px; max-width: 80%;">',
+    );
+    generateCodeBlock(code.content, language, fileNode, true);
+    fileNode.append('<div class="code-explanations" style="margin: 20px 0; ">');
+    for (const explanation of code.explanations) {
+      let explainClass = '';
+      let style = '';
+      if (animated) {
+        explainClass = `class="explain-${explanation.line}"`;
+        style = 'opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out;';
+      }
+      fileNode.append(
+        `<div ${explainClass} style="font-size: .55em; line-height: 1.2em; text-align: left; ${style}">${explanation.content}</div>`,
+      );
+    }
+    fileNode.append('</div>');
+    fileNode.append('</div>');
+  }
+
+  function generateCodeBlock(content: string, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+    let lineAnimation = '';
+    if (animated) {
+      lineAnimation = `data-line-numbers="${content
+        .split('\n')
+        .map((_, i) => i + 1)
+        .join('|')}"`;
+    }
+    fileNode.append(
+      `<pre style="width: fit-content"><code class="language-${language}" data-trim ${lineAnimation}>${content}</code></pre>`,
+    );
+  }
 }
 
 function markdownToHtml(markdown: string): string {
