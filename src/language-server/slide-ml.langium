@@ -59,8 +59,7 @@ Presentation:
 ;
 
 Slide:
-  '-slide:' 
-    ('annotable:' annotable=BOOLEAN)?
+  '-slide:'
     (transition=Transition)?
     ('-'elements+=Element)+
 ;
@@ -73,7 +72,7 @@ Group:
     (style=Style)?
     (position=Position)?
     (animation=Animation)?
-      ('-'elements+=Element)+
+    ('-'elements+=Element)+
 ;
 
 Text:
@@ -212,7 +211,7 @@ Position:
   'position:'(ShorthandPosition | DetailedPosition);
 
 ShorthandPosition:
-  (general=FlatPosition | x=XPosition y=YPosition) ( z=ZPosition)?;
+  (general=FlatPosition | x=XPosition? y=YPosition?)? ( z=ZPosition)?;
 
 FlatPosition returns string:
   'center';
@@ -244,8 +243,7 @@ terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
 
 Animation:
   "animation:"  
-    'order:' order=NUMBER? 
-    ComplexAnimation?;
+    'order:' order=NUMBER?;
 
 ComplexAnimation:
   'type:' animationType=EffectToken
