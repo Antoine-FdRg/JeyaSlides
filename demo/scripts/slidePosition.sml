@@ -3,7 +3,7 @@ presentation:
     -slide:
       elements:
         -text: 
-          content: "Default position"
+          content: "Default position is top at the center"
           style:
             backgroundColor: #f14b4b
     -slide:
@@ -14,9 +14,7 @@ presentation:
           content: "Positioned at x left, y top"
           style:
             backgroundColor: #4bf14b
-            position:
-              x: left
-              y: top
+            position: left top
         -text:
           content: "Positioned at x center, y top"
           style:
@@ -42,9 +40,7 @@ presentation:
           content: "Positioned at x center, y center"
           style:
             backgroundColor: #d8f14b
-            position:
-              x: center
-              y: center
+            position: center
         -text:
           content: "Positioned at x right, y center"
           style:
@@ -70,9 +66,7 @@ presentation:
           content: "Positioned at x right, y bottom"
           style:
             backgroundColor: #b41ff1
-            position:
-              x: right
-              y: bottom
+            position: right bottom
     -slide:
       elements:
         -title: 
@@ -82,33 +76,29 @@ presentation:
           style:
             backgroundColor: #f14b4b
         -text: 
-          content: "Positioned at (20, 30)"
+          content: "(20, 30)"
           style:
             backgroundColor: #4bf14b
             position:
-              x: -20
-              y: 300
+              x: 20
+              y: 30
         -text:
-          content: "Positioned at (50, 50)"
+          content: "(70, 40)"
           style:
             backgroundColor: #d8f14b
-            position:
-              x: 50
-              y: 50
+            position: 70 40
         -text:
-          content: "Positioned at (50, 70)"
+          content: "(40, 60)"
           style:
             backgroundColor: #4b4bf1
             position:
-              x: 50
-              y: 70
+              x: 40
+              y: 60
         -text:
-          content: "Positioned at (80, 90)"
+          content: "(80, 90)"
           style:
             backgroundColor: #f1a14b
-            position:
-              x: 80
-              y: 90
+            position: 80 90
     -slide:
       elements:
         -title: 
@@ -135,9 +125,7 @@ presentation:
           style:
             size: 20 10
             backgroundColor: #bdbdbd
-            position:
-              x: center
-              y: center
+            position: center center front
     -slide:
       elements:
         -group:
@@ -166,6 +154,8 @@ presentation:
               style:
                 size: 50 50
                 backgroundColor: #888
+                font:
+                  color: "lightgrey"
                 position:
                   x: right
                   y: bottom
@@ -175,7 +165,7 @@ presentation:
                 style:
                   backgroundColor: #522
                   position:
-                    x: -50
+                    x: 50
                     y: top
                 -text: 
                   content: "left 50 in the parent group"
