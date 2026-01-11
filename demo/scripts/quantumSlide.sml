@@ -3,30 +3,20 @@ presentation:
   author: "Dr. Jane Doe"
   slides:
     -slide:
-      elements:
-        -title:
-          content: "Quantum Physics in the 21st Century"
-          align: center
+      -title:  "Quantum Physics in the 21st Century"
+        align: center
 
     -slide:
-      elements:
-        -group:
-          elements:
-            -text:
-              content: "What is Superposition?"
-              align: center
+      -group:
+        -text: "What is Superposition?"
+          align: center
           style: 
             size: 80 auto
-            -text:
-              content: "A quantum system can exist in multiple states at once."
+            -text:"A quantum system can exist in multiple states at once."
               align: center
             -group:
-              elements:
-                -text:
-                  content: "Example: Schrödinger's Cat"
-                  align: center
+              -text: "Example: Schrödinger's Cat"
+                align: center
         -group:
-          elements:
-            -text:
-              content: "Why is it important?"
-              align: center
+          -text:"Why is it important?"
+          align: center

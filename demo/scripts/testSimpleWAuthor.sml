@@ -3,14 +3,10 @@
   author: "antoin"
   slides: 
     -slide: 
-      elements: 
-        -title: 
-          content: "Hello" 
-          align: center 
+      -title: "Hello" 
+        align: center 
 
     -slide:
-      elements:
-        -text: 
-          content: "testrefacto"
-          align: center
+      -text: "testrefacto"
+        align: center
 

@@ -59,11 +59,9 @@ Presentation:
 ;
 
 Slide:
-  '-slide:' 
-    ('annotable:' annotable=BOOLEAN)?
+  '-slide:'
     (transition=Transition)?
-    'elements:' 
-      ('-'elements+=Element)+
+    ('-'elements+=Element)+
 ;
 
 Element:
@@ -74,8 +72,7 @@ Group:
     (style=Style)?
     (position=Position)?
     (animation=Animation)?
-    'elements:'
-      ('-'elements+=Element)+
+    ('-'elements+=Element)+
 ;
 
 Text:
@@ -89,7 +86,7 @@ Code:
   'code:' 
   ('language:' language=STRING)?
   ('animated:' animated=BOOLEAN)?
-  'content:' content=STRING
+  content=STRING
   ('explanations:' 
     explanations+=CodeExplanation+)?;
 
@@ -100,15 +97,13 @@ BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
 
 Paragraph:
-  type=TextType  ':' 
-    'content:'content=STRING;
+  type=TextType  ':' content=STRING;
 
 List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
-    'items:' 
-      '-'items+=STRING 
-      ('-' items+=STRING)*
+    '-'items+=STRING 
+    ('-' items+=STRING)*
 ;
 
 Image:
@@ -147,8 +142,7 @@ PersonnalisedQuiz:
 ;
 
 Question:
-  '-question:'
-      'content:' content=STRING
+  '-question:' content=STRING
       'options:'
           (option+=Option)+
       ('correctMessage:' correctMessage=STRING)?
@@ -217,7 +211,7 @@ Position:
   'position:'(ShorthandPosition | DetailedPosition);
 
 ShorthandPosition:
-  (general=FlatPosition | x=XPosition y=YPosition) ( z=ZPosition)?;
+  (general=FlatPosition | x=XPosition? y=YPosition?)? ( z=ZPosition)?;
 
 FlatPosition returns string:
   'center';
@@ -249,8 +243,7 @@ terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
 
 Animation:
   "animation:"  
-    'order:' order=NUMBER? 
-    ComplexAnimation?;
+    'order:' order=NUMBER?;
 
 ComplexAnimation:
   'type:' animationType=EffectToken

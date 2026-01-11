@@ -26,7 +26,7 @@ import {
   Quiz,
   Code,
   Plot,
-  isPlot
+  isPlot,
   isShorthandPosition,
   CoordinatePosition,
 } from '../language-server/generated/ast';
@@ -1068,16 +1068,12 @@ function generateParagraph(
 }
 
 function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: String[], animationData?: AnimationData) {
-
   const plotId = `plot_${PLOT_COUNTER++}`;
-
 
   const animationClass = animationData?.classes ?? '';
   const animationAttributes = animationData?.attributes ?? '';
 
-  const classAttr = animationClass
-    ? `class="plot-container ${animationClass}"`
-    : `class="plot-container"`;
+  const classAttr = animationClass ? `class="plot-container ${animationClass}"` : `class="plot-container"`;
 
   fileNode.append(`<div ${classAttr} ${animationAttributes}`);
 
@@ -1100,8 +1096,8 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
   const yLabel = plot.plotLayout?.yLabel;
 
   const hoverTemplate = hasLabels
-    ? "%{text}<br>Study hours: %{x}<br>Score: %{y}<extra></extra>"
-    : "Study hours: %{x}<br>Score: %{y}<extra></extra>";
+    ? '%{text}<br>Study hours: %{x}<br>Score: %{y}<extra></extra>'
+    : 'Study hours: %{x}<br>Score: %{y}<extra></extra>';
 
   fileNode.append(`
 <script>

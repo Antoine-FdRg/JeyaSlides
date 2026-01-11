@@ -3,15 +3,12 @@ presentation:
   author: "Boccaccio"
   slides:
     -slide:
-      elements:
-        -title:
-            content: "Study time vs test results"
+      -title: "Study time vs test results"
             style:
               font:
                 size: 30
 
-        -text:
-            content: "Each point represents a student."
+        -text: "Each point represents a student."
             style:
               font:
                 size: 28
