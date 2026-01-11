@@ -2,8 +2,7 @@ template:
   name: upgradedQuantikTemplate
 
   defaults:
-    background:
-      color: #fcf3e3
+    backgroundColor: #fcf3e3
 
     transition:
       type: fade

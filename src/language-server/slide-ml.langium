@@ -39,8 +39,7 @@ TemplateTransition:
 ;
 
 TemplateBackground:
-  'background:'
-    'color:' color=BackgroundValue
+  'backgroundColor:' color=BackgroundValue
 ;
 
 TemplateTextStyles:
