@@ -4,9 +4,7 @@ presentation:
       transition:
         type: zoom-in
         duration: slow
-      elements:
-        -text: 
-          content: "test zoom-in"
+      -text:   "test zoom-in"
           style:
             backgroundColor: #f14b4b
 
@@ -14,18 +12,14 @@ presentation:
       transition:
         type: zoom
         duration: fast
-      elements:
-        -text: 
-          content: "Test zoom à fast"
+      -text:   "Test zoom à fast"
           
 
     -slide:
       transition:
         type: convex
         duration: fast
-      elements:
-        -text: 
-          content: "test convex à fast"
+      -text:   "test convex à fast"
           style:
             size: 70 70
             backgroundColor: #0bac0b
@@ -35,9 +29,7 @@ presentation:
       transition:
         type: concave
         duration: default
-      elements:
-        -text: 
-          content: "Test concave à default"
+      -text:   "Test concave à default"
           style:
             size: 10 10
             backgroundColor: #555
@@ -47,9 +39,7 @@ presentation:
       transition:
         type: slide
         duration: slow
-      elements:
-        -text: 
-            content: "test transition slide slow"
+      -text:  "test transition slide slow"
             style:
             size: 70 auto
             backgroundColor: #888
@@ -58,9 +48,7 @@ presentation:
       transition:
         type: fade
         duration: default
-      elements:
-        -text: 
-          content: "Text fade à default"
+      -text:   "Text fade à default"
           style:
             backgroundColor: #a0a005
             font:
@@ -71,9 +59,7 @@ presentation:
       transition:
         type: fade-out
         duration: fast
-      elements:
-        -text: 
-          content: "Test fade-out à fast"
+      -text:   "Test fade-out à fast"
           style:
             backgroundColor: #5a05a0
             font:

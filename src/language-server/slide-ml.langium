@@ -62,8 +62,7 @@ Slide:
   '-slide:' 
     ('annotable:' annotable=BOOLEAN)?
     (transition=Transition)?
-    'elements:' 
-      ('-'elements+=Element)+
+    ('-'elements+=Element)+
 ;
 
 Element:
@@ -74,7 +73,6 @@ Group:
     (style=Style)?
     (position=Position)?
     (animation=Animation)?
-    'elements:'
       ('-'elements+=Element)+
 ;
 
@@ -89,7 +87,7 @@ Code:
   'code:' 
   ('language:' language=STRING)?
   ('animated:' animated=BOOLEAN)?
-  'content:' content=STRING
+  content=STRING
   ('explanations:' 
     explanations+=CodeExplanation+)?;
 
@@ -100,15 +98,13 @@ BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
 
 Paragraph:
-  type=TextType  ':' 
-    'content:'content=STRING;
+  type=TextType  ':' content=STRING;
 
 List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
-    'items:' 
-      '-'items+=STRING 
-      ('-' items+=STRING)*
+    '-'items+=STRING 
+    ('-' items+=STRING)*
 ;
 
 Image:
@@ -147,8 +143,7 @@ PersonnalisedQuiz:
 ;
 
 Question:
-  '-question:'
-      'content:' content=STRING
+  '-question:' content=STRING
       'options:'
           (option+=Option)+
       ('correctMessage:' correctMessage=STRING)?
