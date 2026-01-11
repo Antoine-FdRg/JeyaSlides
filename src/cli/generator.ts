@@ -393,7 +393,7 @@ function generateSlide(
     : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
-  const bg = template?.backgroundColor;
+  const bg = slide.backgroundColor ?? template?.backgroundColor;
 
   const slideStyle = `
     width: 100%;
@@ -1126,7 +1126,12 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 `);
 }
 
-function resolveBackground(background: BackgroundValue): string {
+function resolveBackground(background: string | BackgroundValue): string {
+
+  if (typeof background === 'string') {
+    return `background-color: ${background};`;
+  }
+
   if ((background as SolidColor).color !== undefined) {
     return `background: ${(background as SolidColor).color};`;
   }

@@ -60,6 +60,7 @@ Presentation:
 
 Slide:
   '-slide:'
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
     (transition=Transition)?
     ('-'elements+=Element)+
 ;

@@ -25,6 +25,14 @@ presentation:
         backgroundColor: gradient "green" "blue" radial
 
     -slide:
-      -title: "Normal background color"
+      -title: "Normal background color on an element"
       style:
         backgroundColor: "orange"
+
+    -slide:
+      backgroundColor: gradient "orange" "yellow" radial
+      -title: "Gradient background color for the whole slide"
+
+    -slide:
+      backgroundColor: "green"
+      -title: "Normal background color for the whole slide"      
