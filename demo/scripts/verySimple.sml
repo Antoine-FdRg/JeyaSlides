@@ -3,8 +3,7 @@ presentation:
     -slide: 
       -title: "Hello" 
         align: center 
-
-    -slide:
-      -text: "Okay"
-        align: center
+        style: 
+          font: "Courier New" 50
+            color: "green"
 

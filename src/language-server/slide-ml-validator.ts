@@ -1,5 +1,5 @@
 import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
-import { JeyaSlidesAstType, Plot, Template } from './generated/ast';
+import { Font, JeyaSlidesAstType, Plot, Template } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
 export function registerValidationChecks(services: SlideMLServices) {
@@ -171,15 +171,30 @@ export class SlideMLValidator {
     }
   }
 
-  validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
-    if (node.$cstNode) {
-      const fieldName = node.$type;
-      const text = node.$cstNode.text.split(':')[1]?.trim() || '';
-      if (text === '') {
-        accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
-      }
+validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
+  if (!node.$cstNode) return;
+  if (node.$type === 'Font') {
+    const font = node as Font;
+
+    const isEmpty =
+      font.name === undefined &&
+      font.size === undefined &&
+      font.color === undefined &&
+      (!font.transformations || font.transformations.length === 0);
+
+    if (isEmpty) {
+      accept('error', `La balise font ne doit pas être vide.`, { node });
     }
+    return;
   }
+
+  const fieldName = node.$type;
+  const textAfterColon = node.$cstNode.text.split(':')[1]?.trim();
+
+  if (textAfterColon === '') {
+    accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
+  }
+}
 
   validatePosition(node: AstNode, accept: ValidationAcceptor): void {
     if (node.$cstNode) {

@@ -7,9 +7,7 @@ template:
     textStyles:
       title:
         align: center
-        font:
-          name: "Playfair Display"
-          size: 52
+        font: "Playfair Display" 52
           color: "orange"
           transformations:
             - bold
@@ -17,18 +15,14 @@ template:
 
       subtitle:
         align: center
-        font:
-          name: "Playfair Display"
-          size: 36
+        font: "Playfair Display" 36
           color: #3c278a
           transformations:
             - bold
             - underline
 
       text:
-        font:
-          name: "Courier New"
-          size: 24
+        font: "Courier New" 24
           color: #127020
 
   titleTemplate:

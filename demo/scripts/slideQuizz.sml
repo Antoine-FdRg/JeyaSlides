@@ -25,8 +25,7 @@ presentation:
       -title: "Quizz en ligne"
             align: center
             style:
-                font: 
-                    size: 20
+                font: 20
         -quiz:
             link: "https://www.mentimeter.com/app/presentation/aljjw7k8kj17s534fb3xqk4qerr9aq47/embed"
             joinCode: "4769 2583"

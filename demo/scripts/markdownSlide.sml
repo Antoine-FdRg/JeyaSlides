@@ -14,8 +14,7 @@ presentation:
         align: justify
         style:
           size: 10 auto
-          font:
-            size: 32
+          font: 32
     -slide: 
       - title:  "Liste à puces"
       -list: 
@@ -38,7 +37,6 @@ presentation:
         -"*Comment ça va ?*"
         -"__Très bien__"
         style:
-          font:
-            size: 40
+          font: 40
             color: "#ff8800"
           rotation: 2

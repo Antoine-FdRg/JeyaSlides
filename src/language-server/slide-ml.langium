@@ -170,12 +170,30 @@ SizeValue:
 
 Font:
   'font:'
-    ('name:' name=STRING)?
-    ('size:' size=NUMBER)?
-    ('color:' color=ColorValue)?
-    ('transformations:'
-      '-'transformations+=FontTransformation 
-      ('-' transformations+=FontTransformation)* )?
+  (
+    (
+      (name=STRING size=NUMBER?
+      | size=NUMBER name=STRING?)
+      ('color:' color=ColorValue)?
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      ('color:' color=ColorValue)
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      'transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      ('color:' color=ColorValue)?
+    )
+  )
 ;
 
 terminal FontTransformation: 'bold' | 'italic' | 'underline';

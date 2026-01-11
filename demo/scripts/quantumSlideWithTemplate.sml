@@ -21,8 +21,7 @@ presentation:
         -text:"A quantum system can exist in multiple states at once."
           align: center
           style:
-            font:
-              name: "Playfair Display"
+            font: "Playfair Display"
               color: #c2ce13
         -group:
           -text:"Example: Schrödinger's Cat"
