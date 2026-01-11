@@ -1,3 +1,5 @@
+import { BackgroundValue } from "../language-server/generated/ast";
+
 export type TextStyleDefaults = {
   fontFamily?: string;
   fontSize?: number;
@@ -9,7 +11,7 @@ export type TextStyleDefaults = {
 export type TemplateContext = {
   titleElements?: any[];
   bodyElements?: any[];
-  backgroundColor?: string;
+  backgroundColor?: BackgroundValue;
   textDefaults?: {
     title?: TextStyleDefaults;
     subtitle?: TextStyleDefaults;

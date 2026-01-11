@@ -29,6 +29,9 @@ import {
   isPlot,
   isShorthandPosition,
   CoordinatePosition,
+  SolidColor,
+  BackgroundValue,
+  GradientColor,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -395,7 +398,7 @@ function generateSlide(
   const slideStyle = `
     width: 100%;
     height: 100%;
-    ${bg ? `background-color: ${bg};` : ''}
+    ${bg ? resolveBackground(bg) : ''}
   `;
   const hasQuiz = slide.elements.some((e) => isQuiz(e));
   fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
@@ -461,7 +464,7 @@ function getElementStyles(element: Element): string[] {
   const styles: string[] = [...DEFAULT_ELEMENT_STYLES];
   if (!element.style) return styles;
   if (element.style.backgroundColor) {
-    styles.push(`background-color: ${element.style.backgroundColor};`);
+    styles.push(resolveBackground(element.style.backgroundColor));
   }
   if (element.style.rotation) {
     styles.push(`transform: rotate(${element.style.rotation}deg);`);
@@ -1121,4 +1124,28 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 })();
 </script>
 `);
+}
+
+function resolveBackground(background: BackgroundValue): string {
+  if ((background as SolidColor).color !== undefined) {
+    return `background: ${(background as SolidColor).color};`;
+  }
+  const gradient = background as GradientColor;
+
+  const from = gradient.from;
+  const to = gradient.to;
+  let direction = 'to bottom';
+
+  if (gradient.modifier) {
+    if (gradient.modifier === 'horizontal') direction = 'to right';
+    else if (gradient.modifier === 'vertical') direction = 'to bottom';
+    else if (gradient.modifier === 'diagonal') direction = 'to bottom right';
+    else if (gradient.modifier === 'radial') {
+      return `background: radial-gradient(circle, ${from}, ${to});`;
+    } else if ((gradient.modifier as any).angle !== undefined) {
+      return `background: linear-gradient(${(gradient.modifier as any).angle}deg, ${from}, ${to});`;
+    }
+  }
+
+  return `background: linear-gradient(${direction}, ${from}, ${to});`;
 }

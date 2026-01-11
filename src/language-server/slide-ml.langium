@@ -31,7 +31,7 @@ TemplateDefaults:
 
 TemplateBackground:
   'background:'
-    'color:' color=ColorValue
+    'color:' color=BackgroundValue
 ;
 
 TemplateTextStyles:
@@ -157,7 +157,7 @@ Option:
 Style:
   'style:'
     (size=Size)?
-    ('backgroundColor:' backgroundColor=ColorValue)?
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
     (font=Font)?
     ('rotation:' rotation=NUMBER)?
 ;
@@ -283,6 +283,33 @@ DurationType returns string:
 
 ColorValue returns string:
     HexColor | STRING
+;
+
+BackgroundValue:
+    SolidColor | GradientColor
+;
+
+SolidColor:
+    color=ColorValue
+;
+
+GradientColor:
+  'gradient'
+    from=ColorValue
+    to=ColorValue
+    (modifier=GradientKeywordModifier | angle=GradientAngle)?
+;
+
+GradientKeywordModifier returns string:
+    GradientDirection | 'radial'
+;
+
+GradientDirection returns string:
+    'horizontal' | 'vertical' | 'diagonal'
+;
+
+GradientAngle:
+    angle=NUMBER 'deg'
 ;
 
 terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
