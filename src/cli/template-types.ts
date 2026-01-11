@@ -8,10 +8,16 @@ export type TextStyleDefaults = {
   transformations?: ('bold' | 'italic' | 'underline')[];
 };
 
+export type TemplateTransition = {
+  type: string;
+  duration?: 'fast' | 'default' | 'slow';
+};
+
 export type TemplateContext = {
   titleElements?: any[];
   bodyElements?: any[];
   backgroundColor?: BackgroundValue;
+  transition?: TemplateTransition;
   textDefaults?: {
     title?: TextStyleDefaults;
     subtitle?: TextStyleDefaults;

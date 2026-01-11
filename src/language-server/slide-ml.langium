@@ -25,8 +25,17 @@ Template:
 
 TemplateDefaults:
   'defaults:'
-    (background=TemplateBackground)?
-    (textStyles=TemplateTextStyles)?
+    (
+      background=TemplateBackground
+    | textStyles=TemplateTextStyles
+    | transition=TemplateTransition
+    )*
+;
+
+TemplateTransition:
+  'transition:'
+    'type:' type=EffectToken
+    ('duration:' duration=DurationType)?
 ;
 
 TemplateBackground:

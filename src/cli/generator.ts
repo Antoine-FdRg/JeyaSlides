@@ -35,7 +35,7 @@ import {
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
-import { extractTextDefaults, resolveTextStyles } from './template-utils';
+import { extractTemplateTransition, extractTextDefaults, resolveTextStyles } from './template-utils';
 import { TemplateContext } from './template-types';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
@@ -334,6 +334,7 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
     bodyElements: templateModel.bodyTemplate?.elements,
     backgroundColor: templateModel.defaults?.background?.color,
     textDefaults: extractTextDefaults(templateModel),
+    transition: extractTemplateTransition(templateModel),
   };
 }
 
@@ -385,12 +386,18 @@ function generateSlide(
   template: TemplateContext | undefined,
   fileNode: CompositeGeneratorNode,
 ) {
-  const normalizedTransition = slide.transition
+const normalizedTransition =
+  slide.transition
     ? {
         type: slide.transition.type,
-        duration: slide.transition.duration ? slide.transition.duration : 'default',
+        duration: slide.transition.duration ?? 'default',
       }
-    : undefined;
+    : template?.transition
+      ? {
+          type: template.transition.type,
+          duration: template.transition.duration ?? 'default',
+        }
+      : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
   const bg = slide.backgroundColor ?? template?.backgroundColor;

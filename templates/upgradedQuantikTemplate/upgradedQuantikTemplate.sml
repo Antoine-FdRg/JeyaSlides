@@ -1,8 +1,13 @@
 template:
   name: upgradedQuantikTemplate
+
   defaults:
     background:
       color: #fcf3e3
+
+    transition:
+      type: fade
+      duration: slow
 
     textStyles:
       title:
@@ -27,19 +32,15 @@ template:
 
   titleTemplate:
     elements:
-      - text:
-          content: "Université Côte d'Azur"
-          align: center
+      - title: "Université Côte d'Azur"
+        align: center
+
       - image: "../../templates/upgradedQuantikTemplate/assets/quantikLogo.jpg"
-          style:
-            size:
-              width: 10
-              height: 10
+        style:
+          size: 40 10
 
   bodyTemplate:
     elements:
       - group:
-          elements:
-            - text:
-                content: "Quantik - Body template"
-                align: center
+          - text: "Quantik - Body template"
+            align: center
