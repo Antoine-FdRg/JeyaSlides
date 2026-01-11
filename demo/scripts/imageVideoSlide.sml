@@ -8,8 +8,7 @@ presentation:
         style:
           backgroundColor: #fec7f0
           font: 16
-      -video:
-        link: "https://www.youtube.com/watch?v=l5Eu4XVwZZs"
+      -video: "https://www.youtube.com/watch?v=l5Eu4XVwZZs"
         style:
           size: 50 40
           rotation: 10
@@ -21,8 +20,7 @@ presentation:
         style:
           backgroundColor: #fec7f0
           font: 16
-      -video:
-        link: "videos/quantiqueVideo.mp4"
+      -video: "videos/quantiqueVideo.mp4"
         style:
           size: 50 20
           rotation: 5
@@ -35,8 +33,7 @@ presentation:
         style:
           backgroundColor: #fec7f0
           font: 16
-      -image:
-        link: "https://amphisciences.ouest-france.fr/wp-content/uploads/2024/10/AdobeStock_271324836-1280x640.jpeg"
+      -image: "https://amphisciences.ouest-france.fr/wp-content/uploads/2024/10/AdobeStock_271324836-1280x640.jpeg"
         style:
           size: 70 40
           rotation: 5
@@ -49,8 +46,7 @@ presentation:
         style:
           backgroundColor: #fec7f0
           font: 16
-      -image:
-        link: "images/quantique.webp"
+      -image: "images/quantique.webp"
         style:
           size: 70 40
           rotation: 5

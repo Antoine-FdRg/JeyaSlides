@@ -30,8 +30,7 @@ template:
       - text:
           content: "Université Côte d'Azur"
           align: center
-      - image:
-          link: "../../templates/upgradedQuantikTemplate/assets/quantikLogo.jpg"
+      - image: "../../templates/upgradedQuantikTemplate/assets/quantikLogo.jpg"
           style:
             size:
               width: 10

@@ -108,16 +108,14 @@ List:
 ;
 
 Image:
-  'image:'
-    'link:' link=STRING
+  'image:' link=STRING
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
 ;
 
 Video:
-  'video:'
-    'link:' link=STRING
+  'video:' link=STRING
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
