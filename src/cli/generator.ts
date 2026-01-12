@@ -32,6 +32,7 @@ import {
   SolidColor,
   BackgroundValue,
   GradientColor,
+  CodeAnimation,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
@@ -1089,12 +1090,12 @@ function generateText(
 function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
   const lang = code.language ? code.language : 'plaintext';
   const hasExplanations = code.explanations && code.explanations.length > 0;
-  if (code.animated && hasExplanations) {
-    generateExplainedCode(code, lang, fileNode, true);
+  if (code.codeAnimation && hasExplanations) {
+    generateExplainedCode(code, lang, fileNode, code.codeAnimation);
     return;
   }
-  if (code.animated) {
-    generateCodeBlock(code.content, lang, fileNode, true);
+  if (code.codeAnimation) {
+    generateCodeBlock(code.content, lang, fileNode, code.codeAnimation);
     return;
   }
   if (hasExplanations) {
@@ -1103,16 +1104,21 @@ function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
   }
   generateCodeBlock(code.content, lang, fileNode);
 
-  function generateExplainedCode(code: Code, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+  function generateExplainedCode(
+    code: Code,
+    language: string,
+    fileNode: CompositeGeneratorNode,
+    codeAnimation?: CodeAnimation,
+  ) {
     fileNode.append(
       '<div class="group" style="display: flex; flex-direction: row; align-items: center; min-width: 800px; max-width: 80%;">',
     );
-    generateCodeBlock(code.content, language, fileNode, true);
+    generateCodeBlock(code.content, language, fileNode, codeAnimation);
     fileNode.append('<div class="code-explanations" style="margin: 20px 0; ">');
     for (const explanation of code.explanations) {
       let explainClass = '';
       let style = '';
-      if (animated) {
+      if (codeAnimation) {
         explainClass = `class="explain-${explanation.line}"`;
         style = 'opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out;';
       }
@@ -1124,12 +1130,16 @@ function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
     fileNode.append('</div>');
   }
 
-  function generateCodeBlock(content: string, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+  function generateCodeBlock(
+    content: string,
+    language: string,
+    fileNode: CompositeGeneratorNode,
+    animation?: CodeAnimation,
+  ) {
     let lineAnimation = '';
-    if (animated) {
-      lineAnimation = `data-line-numbers="${content
-        .split('\n')
-        .map((_, i) => i + 1)
+    if (animation) {
+      lineAnimation = `data-line-numbers="${animation.ranges
+        .map((r) => (!r.end || r.start === r.end ? r.start : `${r.start}-${r.end}`))
         .join('|')}"`;
     }
     fileNode.append(

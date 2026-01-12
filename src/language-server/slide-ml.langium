@@ -94,10 +94,16 @@ Text:
 Code:
   'code:' 
   ('language:' language=STRING)?
-  ('animated:' animated=BOOLEAN)?
+  ('codeAnimation:' codeAnimation=CodeAnimation)?
   content=STRING
   ('explanations:' 
     explanations+=CodeExplanation+)?;
+
+CodeAnimation:
+  ranges+=CodeHighlightRange ('|' ranges+=CodeHighlightRange)*;
+
+CodeHighlightRange:
+  start=NUMBER ('..' end=NUMBER)?;
 
 CodeExplanation:
   '-' line=NUMBER ":" content=STRING;
