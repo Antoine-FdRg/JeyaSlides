@@ -5,6 +5,9 @@ presentation:
     template: "finalPresentationTemplate"
     slides:
       -slide:
+        transition:
+          type: zoom-in
+          duration: slow
           -title: "Slide Deck ML"
             style:
               font: 45
@@ -20,6 +23,9 @@ presentation:
             style:
               font: 12
      -slide:
+        transition:
+          type: fade
+          duration: fast
         -title: "Sommaire"
             style:
                 font: 28
@@ -52,6 +58,9 @@ presentation:
                 x: right
                 y: bottom
         -slide:
+            transition:
+              type: slide
+              duration: slow
             -title: "Introduction"
                 style:
                 font: 28
@@ -61,6 +70,9 @@ presentation:
                 font: 16
             -image: "images/dm.png"
         -slide:
+            transition:
+              type: slide
+              duration: slow
             -title: "Résumé des fonctionnalités"
                 style:
                 font: 28
@@ -112,6 +124,9 @@ presentation:
                 style:
                   font: 16
     -slide:
+     transition:
+        type: fade
+        duration: default
       -title: "Texte  & styles"
         style:
           font: 28 
@@ -138,6 +153,9 @@ presentation:
         backgroundColor: #e0f23d
           font: 16
     -slide:
+     transition:
+        type: zoom-in
+        duration: slow
       -title: "effets et styles"
         style:
           font: 28 
@@ -149,6 +167,9 @@ presentation:
             style:
                 size: 60 40
     -slide:
+      transition:
+          type: slide
+          duration: slow
       -title: "Acceptance de notre DSL "
         style:
           font: 28 
@@ -159,6 +180,9 @@ presentation:
             style:
                 size: 60 40
     -slide:
+      transition:
+        type: fade
+        duration: default
       -title:   "Visualisation de code"
         style:
           font: 28
@@ -187,6 +211,9 @@ presentation:
               print(sum)
         "
     -slide:
+      transition:
+        type: slide
+        duration: slow
       -title: "Positionnement de nos éléments"
         style:
           font: 28
@@ -225,6 +252,9 @@ presentation:
               backgroundColor: #252
               position: left 50
     -slide:
+      transition:
+        type: fade
+        duration: default
       -title: "Quiz en live"
         style:
           font: 28
@@ -239,8 +269,6 @@ presentation:
       -text: "Cliquer pour faire apparaître le graphique. Chaque point représente un étudiant."
         style:
           font: 20
-
-    
         -plot:
             type: scatter
             data:
@@ -257,8 +285,6 @@ presentation:
               x: 70
               y: 25
             animation: 1
-
-
         -plot:
             type: bar
             data:
@@ -275,7 +301,6 @@ presentation:
               x: 70
               y: 70
             animation: 1
-
         -plot:
             type: line
             data:
@@ -305,6 +330,9 @@ presentation:
               y: 25
             animation: 1
       -slide:
+      transition:
+        type: zoom-in
+        duration: slow
         -title: "Visualisation d'équations"
           style:
             font: 28 
@@ -313,6 +341,9 @@ presentation:
             backgroundColor: #e0f23d
             font: 16
       -slide:
+      transition:
+        type: concave
+        duration: default    
         -title: "Analyse critique "
           style:
             font: 28
@@ -321,6 +352,9 @@ presentation:
             backgroundColor: #e0f23d
             font: 16
       -slide:
+      transition:
+        type: fade-out
+        duration: fast
         -title: "Merci pour votre attention !"
           style:
             font: 28
