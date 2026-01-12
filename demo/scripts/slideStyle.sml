@@ -27,7 +27,7 @@ presentation:
           size: 80 auto
           backgroundColor: #aaa
     -slide:
-      -group:
+      -group:[
         style:
           size: 100 auto
         backgroundColor: #ccc
@@ -43,6 +43,7 @@ presentation:
             style:
               size: 70 auto
               backgroundColor: #888
+      ]
     -slide:
       -text:   "Text with custom font"
         style:

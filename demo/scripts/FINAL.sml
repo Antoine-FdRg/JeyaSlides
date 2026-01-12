@@ -221,8 +221,8 @@ presentation:
         style:
           backgroundColor: #e0f23d
           font: 16
-      -group:
-        style:
+      -group: [
+        style: 
           size: 80 80
           backgroundColor: #cccccc
           position:
@@ -236,7 +236,7 @@ presentation:
           style:
             backgroundColor: #888
             position:left center
-        -group: 
+        -group: [
           style:
             size: 50 50
             backgroundColor: #888
@@ -251,6 +251,8 @@ presentation:
             style:
               backgroundColor: #252
               position: left 50
+        ]
+      ]
     -slide:
       transition:
         type: fade
@@ -270,22 +272,24 @@ presentation:
         style:
           font: 20
 
+      -group:[
+        position:
+          x: 70
+          y: 25
         -plot:
-            type: scatter
-            data:
-              xAxis: [1, 2, 3, 4, 5]
-              yAxis: [8, 10, 12, 15, 18]
-              labels:
-                ["Student A", "Student B", "Student C", "Student D", "Student E"]
-            layout:
-              xLabel: "Study hours"
-              yLabel: "Test score"
-            style:
-              size: 25 25
-            position:
-              x: 25
-              y: 50
-            animation: 1
+          type: scatter
+          data:
+            xAxis: [1, 2, 3, 4, 5]
+            yAxis: [8, 10, 12, 15, 18]
+            labels:
+              ["Student A", "Student B", "Student C", "Student D", "Student E"]
+          layout:
+            xLabel: "Study hours"
+            yLabel: "Test score"
+          style:
+            size: 25 25
+          animation: 1
+      ]
         -plot:
             type: bar
             data:

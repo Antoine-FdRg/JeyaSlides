@@ -705,7 +705,7 @@ function getElementPosition(element: Element): string {
         break;
       case 'bottom':
         styles.push('bottom: 2%;');
-        transformStyles.push('translateY(-100%)');
+        // transformStyles.push('translateY(-100%)');
         break;
     }
   }
