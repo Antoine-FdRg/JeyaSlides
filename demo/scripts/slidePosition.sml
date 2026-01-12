@@ -98,7 +98,7 @@ presentation:
         -text: "left center in the parent group"
           style:
             backgroundColor: #888
-            position:left center
+            position: left center
         -group: 
           style:
             size: 50 50

@@ -232,6 +232,21 @@ PlotLayout:
   ('xLabel:' xLabel=STRING)?
   ('yLabel:' yLabel=STRING)?;
 
+Animation:
+  "animation:" 
+    (
+      (animationType=AnimationType order=NUMBER?) | 
+      (order=NUMBER animationType=AnimationType?)
+    )
+;
+
+terminal AnimationType: 
+  'fade-up' | 'fade-down' | 'fade-left' | 'fade-right' |
+  'fade-in-then-out' | 'current-visible' | 'fade-in-then-semi-out' |
+  'grow' | 'semi-fade-out' | 'shrink' | 'strike' |
+  'highlight-red' | 'highlight-green' | 'highlight-blue' |
+  'highlight-current-red' | 'highlight-current-green' | 'highlight-current-blue';
+
 Position:
   'position:'(ShorthandPosition | DetailedPosition);
 
@@ -264,21 +279,12 @@ EnumZPosition returns string:
   'front' | 'back';
 
 
-terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
-
-Animation:
-  "animation:"  
-    'order:' order=NUMBER?;
-
-ComplexAnimation:
-  'type:' animationType=EffectToken
-  ('duration:' duration=NUMBER)?;
-
-
 Transition:
   'transition:' 
-    'type:' type=EffectToken 
+    'type:' type=TransitionEffect 
     ('duration:' duration=DurationType)?;
+
+terminal TransitionEffect: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
 
 TextAlignment returns string:
   'left' | 'center' | 'right' | 'justify';

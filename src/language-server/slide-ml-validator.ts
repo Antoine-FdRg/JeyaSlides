@@ -143,8 +143,7 @@ export class SlideMLValidator {
   }
 
   private validateTypeLine(trimmed: string, currentSection: string | null, accept: ValidationAcceptor, node: AstNode) {
-    if (currentSection !== 'transition' && currentSection !== 'animation') return;
-
+    if (currentSection !== 'transition') return;
     const after = trimmed.split(':')[1] || '';
     const tokens = after.trim().split(/\s+/).filter(Boolean);
     for (const tok of tokens) {
@@ -259,21 +258,14 @@ validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
     }
 
     if (x.length > 0 && y.length > 0 && x.length !== y.length) {
-      accept(
-        'error',
-        `Les tableaux x (${x.length}) et y (${y.length}) doivent avoir la même taille.`,
-        { node }
-      );
+      accept('error', `Les tableaux x (${x.length}) et y (${y.length}) doivent avoir la même taille.`, { node });
     }
 
     const labels = data.labels?.values;
     if (labels && labels.length !== x.length) {
-      accept(
-        'warning',
-        `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`,
-        { node }
-      );
+      accept('warning', `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`, {
+        node,
+      });
     }
   }
-
 }

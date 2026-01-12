@@ -4,15 +4,11 @@ presentation:
       -title: "Animation Slide"
       -text: "Click to reval the next text"
       - text: "Click again to see the next lines at the same time."
-        animation:
-          order: 1
+        animation: fade-up 1
       - text: "This is the second animated line."
-        animation:
-          order: 2
+        animation: 2 fade-down
       - text: "Finally, this is the third animated line."
-        animation:
-          order: 2
-    
+        animation: 2 fade-down
     -slide:
       -title: "What is Superposition?"
         style:
@@ -26,8 +22,7 @@ presentation:
           style:
             size: 50 40
             rotation: 10
-          animation:
-            order: 1
+          animation: fade-up 1
     -slide:
       -title:   "Line animated Code"
       - code:
@@ -51,5 +46,4 @@ presentation:
           style:
             size: 70 40
             rotation: 5
-          animation:
-            order: 1
+          animation: 1

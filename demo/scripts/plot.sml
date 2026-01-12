@@ -24,5 +24,4 @@ presentation:
             position:
               x: center
               y: center
-            animation:
-              order: 1
+            animation: 1
