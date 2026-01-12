@@ -34,7 +34,7 @@ TemplateDefaults:
 
 TemplateTransition:
   'transition:'
-    'type:' type=EffectToken
+    'type:' type=TransitionEffect
     ('duration:' duration=DurationType)?
 ;
 
