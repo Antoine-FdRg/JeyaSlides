@@ -95,7 +95,7 @@ presentation:
               position:
                   x: 25
                   y: 55
-              -text: "Vous pouvez zoomer sur la photo pour voir le Domain Model en plus gros"
+              -text: "Vous pouvez cliquer sur la photo pour voir le Domain Model en plus gros"
                 position: 
                   x:center
               -image: "images/dm.png"
@@ -112,7 +112,7 @@ presentation:
               position:
                   x: 73
                   y: 55
-              -text: " Nous avons basé notre DSL sur un language externe: **Langium** ? Veuillez trouvez ci-joint une vidéo youtube explicative de comment utiliser ce language."
+              -text: " Nous avons basé notre DSL sur un language externe: **Langium** ? Veuillez trouvez ci-dessous une vidéo youtube explicative de comment utiliser ce language."
               -video: "https://www.youtube.com/watch?v=YdulTVCNB0E"
                   style:
                     size: 75 60
@@ -150,7 +150,7 @@ presentation:
                 style:
                   font: 16
               
-              -text: "**Ce texte est affreusement long pour une slide, nous sommes d'accord, vous pouvez utiliser le double click ou D pour annoter la slide afin d'annoter la slide et de mettre en avant les éléments que vous souhaitez.**"
+              -text: "**Ce texte est affreusement long pour une slide, nous sommes d'accord, vous pouvez utiliser le double click ou D pour annoter la slide afin de mettre en avant les éléments que vous souhaitez.**"
                 style:
                   font: 
                     color:"red"
