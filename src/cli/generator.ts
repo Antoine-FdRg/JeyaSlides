@@ -128,7 +128,7 @@ function generateRevealJs(
   .preview-aspect-ratio {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; /* 16:9 ratio */
+    padding-bottom: 50%; /* 16:10 ratio for 1920x960 */
   }
 
   .preview-content {
@@ -139,31 +139,9 @@ function generateRevealJs(
     height: 100%;
   }
 
-  /* Scale down the reveal container and adjust font size */
+  /* Let Reveal.js handle all the scaling based on 1920x960 reference */
   .reveal {
-    transform-origin: center center;
-    font-size: clamp(16px, 1.5vw, 48px);
-  }
-
-  /* Responsive font sizing for different elements */
-  .reveal h1 {
-    font-size: clamp(32px, 3.5vw, 96px);
-  }
-
-  .reveal h2 {
-    font-size: clamp(24px, 2.5vw, 64px);
-  }
-
-  .reveal h3 {
-    font-size: clamp(20px, 2vw, 48px);
-  }
-
-  .reveal p, .reveal li {
-    font-size: clamp(16px, 1.5vw, 42px);
-  }
-
-  .reveal code {
-    font-size: clamp(14px, 1.3vw, 36px);
+    /* Reveal.js will scale everything proportionally */
   }
   `
       : ''
@@ -292,11 +270,25 @@ function generateRevealJs(
           hash: true,
           center: true,
           transition: 'slide',
-          width: 2000, // large width to make tldreveal occupy the full space 
-          height: 1125, // large height to make tldreveal occupy the full space
+          ${
+            isPreview
+              ? `
+          // Preview mode: use 1920x960 as reference (16:10 ratio for better content fit)
+          width: 1920,
+          height: 960,
+          margin: 0.04,
+          minScale: 0.2,
+          maxScale: 1.5,
+          `
+              : `
+          // Export mode: larger canvas for tldreveal
+          width: 2000,
+          height: 1125,
           minScale: 0.2,
           maxScale: 2.0,
-          disableLayout: true,
+          `
+          }
+          disableLayout: ${isPreview ? 'false' : 'true'},
           slideNumber: ${presentation.displaySlideNumber ?? false},
           scrollActivationWidth: undefined,
           plugins: [Tldreveal.Tldreveal(), RevealHighlight],
@@ -1189,15 +1181,9 @@ function generateParagraph(
 function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: String[], animationData?: AnimationData) {
   const plotId = `plot_${PLOT_COUNTER++}`;
 
-  const plotStyles = styles.filter(s => !s.includes('fit-content'));
+  const plotStyles = styles.filter((s) => !s.includes('fit-content'));
 
-  const finalStyles = [
-    'width: 80%;',
-    'height: 60%;',
-    'min-height: 300px;',
-    'visibility: hidden;',
-    ...plotStyles
-  ];
+  const finalStyles = ['width: 80%;', 'height: 60%;', 'min-height: 300px;', 'visibility: hidden;', ...plotStyles];
 
   const animationClass = animationData?.classes ?? '';
   const animationAttributes = animationData?.attributes ?? '';
