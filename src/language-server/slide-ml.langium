@@ -25,13 +25,21 @@ Template:
 
 TemplateDefaults:
   'defaults:'
-    (background=TemplateBackground)?
-    (textStyles=TemplateTextStyles)?
+    (
+      background=TemplateBackground
+    | textStyles=TemplateTextStyles
+    | transition=TemplateTransition
+    )*
+;
+
+TemplateTransition:
+  'transition:'
+    'type:' type=EffectToken
+    ('duration:' duration=DurationType)?
 ;
 
 TemplateBackground:
-  'background:'
-    'color:' color=ColorValue
+  'backgroundColor:' color=BackgroundValue
 ;
 
 TemplateTextStyles:
@@ -60,6 +68,7 @@ Presentation:
 
 Slide:
   '-slide:'
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
     (transition=Transition)?
     ('-'elements+=Element)+
 ;
@@ -107,16 +116,14 @@ List:
 ;
 
 Image:
-  'image:'
-    'link:' link=STRING
+  'image:' link=STRING
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
 ;
 
 Video:
-  'video:'
-    'link:' link=STRING
+  'video:' link=STRING
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
@@ -157,7 +164,7 @@ Option:
 Style:
   'style:'
     (size=Size)?
-    ('backgroundColor:' backgroundColor=ColorValue)?
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
     (font=Font)?
     ('rotation:' rotation=NUMBER)?
 ;
@@ -170,12 +177,30 @@ SizeValue:
 
 Font:
   'font:'
-    ('name:' name=STRING)?
-    ('size:' size=NUMBER)?
-    ('color:' color=ColorValue)?
-    ('transformations:'
-      '-'transformations+=FontTransformation 
-      ('-' transformations+=FontTransformation)* )?
+  (
+    (
+      (name=STRING size=NUMBER?
+      | size=NUMBER name=STRING?)
+      ('color:' color=ColorValue)?
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      ('color:' color=ColorValue)
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      'transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      ('color:' color=ColorValue)?
+    )
+  )
 ;
 
 terminal FontTransformation: 'bold' | 'italic' | 'underline';
@@ -265,6 +290,33 @@ DurationType returns string:
 
 ColorValue returns string:
     HexColor | STRING
+;
+
+BackgroundValue:
+    SolidColor | GradientColor
+;
+
+SolidColor:
+    color=ColorValue
+;
+
+GradientColor:
+  'gradient'
+    from=ColorValue
+    to=ColorValue
+    (modifier=GradientKeywordModifier | angle=GradientAngle)?
+;
+
+GradientKeywordModifier returns string:
+    GradientDirection | 'radial'
+;
+
+GradientDirection returns string:
+    'horizontal' | 'vertical' | 'diagonal'
+;
+
+GradientAngle:
+    angle=NUMBER 'deg'
 ;
 
 terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
