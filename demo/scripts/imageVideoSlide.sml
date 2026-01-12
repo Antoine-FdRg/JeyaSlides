@@ -1,7 +1,7 @@
 presentation:
   slides:
     -slide:
-      -title: "What is Superposition?"
+      -title: "What is Superposition!"
         style:
           font: 28
       -text: "Extrait explicatif depuis YouTube"
