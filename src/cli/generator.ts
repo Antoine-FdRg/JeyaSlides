@@ -673,13 +673,13 @@ function getElementAnimation(element: Element): AnimationData | undefined {
   if (!element.animation) return undefined;
   const animation = element.animation;
   const order = animation.order;
-  return { classes: `fragment`, attributes: `data-fragment-index="${order}"` };
+  const type = animation.animationType ? animation.animationType : '';
+  return { classes: `fragment ${type}`, attributes: `data-fragment-index="${order}"` };
 }
 
 //Quiz helpers
 function sanitizeStringLiteral(s: string | undefined): string {
   if (s == null) return '';
-  // Langium STRING => souvent avec guillemets, ex: "hello"
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
     return s.substring(1, s.length - 1);
   }
