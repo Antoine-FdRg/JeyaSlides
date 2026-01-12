@@ -19,7 +19,7 @@ presentation:
       - title:  "Liste à puces"
       -list: 
         ordered: false
-        -"coucou"
+        -"[!coucou!] guys"
         -"salut"
         -"hello"
     -slide: 

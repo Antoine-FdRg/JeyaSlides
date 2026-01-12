@@ -149,6 +149,13 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   border-radius: 12px;
 }
 
+.highlight {
+  background: #ffeb3b;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  box-decoration-break: clone;
+}
+
 @media (max-width: 1100px){
   .quiz-side{ display:none; }
 }
@@ -482,12 +489,24 @@ function getElementStyles(element: Element): string[] {
 
   function getSizeStyles(element: Element): string[] | undefined {
     let sizeStyles: string[] = [];
+    const isImageStyle = isImage(element);
+
     if (!element.style?.size) return;
-    if (element.style.size.width && element.style.size.width.value != 'auto') {
-      sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+
+    if (element.style.size.width && element.style.size.width.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-width: ${element.style.size.width.value}vw;`);
+      } else {
+        sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+      }
     }
-    if (element.style.size.height && element.style.size.height.value != 'auto') {
-      sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+
+    if (element.style.size.height && element.style.size.height.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-height: ${element.style.size.height.value}vh;`);
+      } else {
+        sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+      }
     }
     return sizeStyles;
   }
@@ -886,16 +905,21 @@ function generateList(
   fileNode: CompositeGeneratorNode,
   elementStyle: any,
   template?: TemplateContext,
-  styles: String[] = [],
+  styles: string[] = [],
 ) {
-  const ordered = (listNode as any).ordered === true || (listNode as any).ordered === 'true';
+  const ordered =
+    (listNode as any).ordered === true ||
+    (listNode as any).ordered === 'true';
+
   const tag = ordered ? 'ol' : 'ul';
   const resolvedTextStyles = resolveTextStyles('text', elementStyle, template);
   const listStyles = ['margin: 5vw;', 'padding-left: 1.2em;', ...styles, ...resolvedTextStyles];
   fileNode.append(`<${tag} style="${listStyles.join(' ')}">`);
   for (const item of listNode.items ?? []) {
     const raw = sanitizeStringLiteral(item);
-    const html = markdownToHtml(raw);
+    let html = markdownToHtml(raw);
+    html = applyInlineHighlight(html);
+
     fileNode.append(`<li>${html}</li>`);
   }
   fileNode.append(`</${tag}>`);
@@ -976,11 +1000,14 @@ function generateText(
 
   if (isCode(text)) {
     generateCode(text, fileNode);
-  } else if (isParagraph(text)) {
+  } 
+  else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
-  } else if (isList(text)) {
+  } 
+  else if (isList(text)) {
     generateList(text as any, fileNode, text.style, template, styles);
-  } else {
+  } 
+  else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
@@ -1060,20 +1087,35 @@ function markdownToHtml(markdown: string): string {
   return html;
 }
 
+function applyInlineHighlight(html: string): string {
+  if (!html) return html;
+
+  return html.replace(
+    /\[\!(.+?)\!\]/g,
+    '<span class="highlight">$1</span>'
+  );
+}
+
 function generateParagraph(
   paragraph: Paragraph,
   fileNode: CompositeGeneratorNode,
   elementStyle: any,
-  template?: TemplateContext,
+  template: TemplateContext | undefined,
 ) {
-  const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
+  const tag =
+    paragraph.type === 'title' ? 'h1' :
+    paragraph.type === 'subtitle' ? 'h2' : 'p';
+
   const alignStyle = paragraph.align ? `text-align: ${paragraph.align};` : '';
   const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
-  paragraph.content = markdownToHtml(paragraph.content);
+
+  let html = markdownToHtml(paragraph.content);
+  html = applyInlineHighlight(html);
+
   fileNode.append(
     `<${tag} style="${DEFAULT_TEXT_STYLE}${alignStyle}${resolvedStyles.join(' ')}">
-      ${paragraph.content}
-     </${tag}>`,
+      ${html}
+     </${tag}>`
   );
 }
 
