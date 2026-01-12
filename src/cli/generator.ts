@@ -482,12 +482,24 @@ function getElementStyles(element: Element): string[] {
 
   function getSizeStyles(element: Element): string[] | undefined {
     let sizeStyles: string[] = [];
+    const isImageStyle = isImage(element);
+
     if (!element.style?.size) return;
-    if (element.style.size.width && element.style.size.width.value != 'auto') {
-      sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+
+    if (element.style.size.width && element.style.size.width.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-width: ${element.style.size.width.value}vw;`);
+      } else {
+        sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+      }
     }
-    if (element.style.size.height && element.style.size.height.value != 'auto') {
-      sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+
+    if (element.style.size.height && element.style.size.height.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-height: ${element.style.size.height.value}vh;`);
+      } else {
+        sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+      }
     }
     return sizeStyles;
   }

@@ -36,7 +36,7 @@ template:
 
       - image: "../../templates/upgradedQuantikTemplate/assets/quantikLogo.jpg"
         style:
-          size: 40 10
+          size: 30 30
 
   bodyTemplate:
     elements:
