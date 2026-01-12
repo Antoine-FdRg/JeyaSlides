@@ -64,7 +64,7 @@ export function generateRevealJsFile(model: Model, filePath: string, destination
 export function generateRevealJsString(model: Model, sourceDir: string): string {
   const fileNode = new CompositeGeneratorNode();
   // For preview, don't copy assets, just use paths as-is
-  generateRevealJs(model, fileNode, sourceDir, sourceDir);
+  generateRevealJs(model, fileNode, sourceDir, sourceDir, true);
   return toString(fileNode);
 }
 
@@ -72,7 +72,13 @@ let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
 let PROJECT_ROOT = '.';
 
-function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
+function generateRevealJs(
+  model: Model,
+  fileNode: CompositeGeneratorNode,
+  sourceDir: string,
+  outputDir: string,
+  isPreview: boolean = false,
+) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
   PROJECT_ROOT = path.resolve(__dirname, '..', '..');
@@ -90,7 +96,78 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-  body { font-family: Arial, sans-serif; }
+  body { 
+    font-family: Arial, sans-serif;
+    ${
+      isPreview
+        ? `
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    `
+        : ''
+    }
+  }
+
+  ${
+    isPreview
+      ? `
+  /* Preview container with 16/9 ratio */
+  .preview-container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    border: 5px solid #aaa;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* 16/9 aspect ratio wrapper */
+  .preview-aspect-ratio {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 ratio */
+  }
+
+  .preview-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Scale down the reveal container and adjust font size */
+  .reveal {
+    transform-origin: center center;
+    font-size: clamp(16px, 1.5vw, 48px);
+  }
+
+  /* Responsive font sizing for different elements */
+  .reveal h1 {
+    font-size: clamp(32px, 3.5vw, 96px);
+  }
+
+  .reveal h2 {
+    font-size: clamp(24px, 2.5vw, 64px);
+  }
+
+  .reveal h3 {
+    font-size: clamp(20px, 2vw, 48px);
+  }
+
+  .reveal p, .reveal li {
+    font-size: clamp(16px, 1.5vw, 42px);
+  }
+
+  .reveal code {
+    font-size: clamp(14px, 1.3vw, 36px);
+  }
+  `
+      : ''
+  }
 
 /* centre uniquement la slide qui contient un quiz */
 .has-quiz{
@@ -165,6 +242,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     </style>
 </head>
 <body>
+    ${isPreview ? '<div class="preview-container"><div class="preview-aspect-ratio"><div class="preview-content">' : ''}
     <div class="reveal">
         <div class="slides">`);
 
@@ -178,6 +256,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   fileNode.append(`
         </div>
     </div>
+    ${isPreview ? '</div></div></div>' : ''}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
     <script src="https://unpkg.com/tldreveal/dist/bundle/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"><\/script>
@@ -393,8 +472,7 @@ function generateSlide(
   template: TemplateContext | undefined,
   fileNode: CompositeGeneratorNode,
 ) {
-const normalizedTransition =
-  slide.transition
+  const normalizedTransition = slide.transition
     ? {
         type: slide.transition.type,
         duration: slide.transition.duration ?? 'default',
@@ -591,7 +669,6 @@ function getElementPosition(element: Element): string {
       transformStyles.push('translateX(-50%)');
       return;
     }
-    console.log('[Position] Processing X position value:', x);
     switch (x) {
       case 'left':
         styles.push('left: 2%;');
@@ -907,9 +984,7 @@ function generateList(
   template?: TemplateContext,
   styles: string[] = [],
 ) {
-  const ordered =
-    (listNode as any).ordered === true ||
-    (listNode as any).ordered === 'true';
+  const ordered = (listNode as any).ordered === true || (listNode as any).ordered === 'true';
 
   const tag = ordered ? 'ol' : 'ul';
   const resolvedTextStyles = resolveTextStyles('text', elementStyle, template);
@@ -1000,14 +1075,11 @@ function generateText(
 
   if (isCode(text)) {
     generateCode(text, fileNode);
-  } 
-  else if (isParagraph(text)) {
+  } else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
-  } 
-  else if (isList(text)) {
+  } else if (isList(text)) {
     generateList(text as any, fileNode, text.style, template, styles);
-  } 
-  else {
+  } else {
     throw new Error(`Unsupported Text type: ${text.$type}`);
   }
 
@@ -1090,10 +1162,7 @@ function markdownToHtml(markdown: string): string {
 function applyInlineHighlight(html: string): string {
   if (!html) return html;
 
-  return html.replace(
-    /\[\!(.+?)\!\]/g,
-    '<span class="highlight">$1</span>'
-  );
+  return html.replace(/\[\!(.+?)\!\]/g, '<span class="highlight">$1</span>');
 }
 
 function generateParagraph(
@@ -1102,9 +1171,7 @@ function generateParagraph(
   elementStyle: any,
   template: TemplateContext | undefined,
 ) {
-  const tag =
-    paragraph.type === 'title' ? 'h1' :
-    paragraph.type === 'subtitle' ? 'h2' : 'p';
+  const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
 
   const alignStyle = paragraph.align ? `text-align: ${paragraph.align};` : '';
   const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
@@ -1115,7 +1182,7 @@ function generateParagraph(
   fileNode.append(
     `<${tag} style="${DEFAULT_TEXT_STYLE}${alignStyle}${resolvedStyles.join(' ')}">
       ${html}
-     </${tag}>`
+     </${tag}>`,
   );
 }
 
@@ -1176,7 +1243,6 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 }
 
 function resolveBackground(background: string | BackgroundValue): string {
-
   if (typeof background === 'string') {
     return `background-color: ${background};`;
   }
