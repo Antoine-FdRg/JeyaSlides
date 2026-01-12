@@ -240,7 +240,6 @@ presentation:
         style:
           font: 20
 
-    
         -plot:
             type: scatter
             data:
@@ -252,10 +251,10 @@ presentation:
               xLabel: "Study hours"
               yLabel: "Test score"
             style:
-              size: 15 15
+              size: 25 25
             position:
-              x: 70
-              y: 25
+              x: 25
+              y: 50
             animation: 1
 
 
@@ -270,11 +269,19 @@ presentation:
               xLabel: "Subjects"
               yLabel: "Average Score"
             style:
-              size: 15 15
+              size: 25 25
             position:
-              x: 70
-              y: 70
+              x: 75
+              y: 50
             animation: 1
+
+      -slide:
+        -title: "Utilisation de graphique"
+          style:
+            font: 28
+        -text: "Cliquer pour faire apparaître le graphique. Chaque point représente un étudiant."
+          style:
+            font: 20
 
         -plot:
             type: line
@@ -285,10 +292,10 @@ presentation:
               xLabel: "Time"
               yLabel: "Value"
             style:
-              size: 15 15
+              size: 25 25
             position:
-              x: 15
-              y: 70
+              x: 25
+              y: 50
             animation: 1
         -plot:
             type: bar
@@ -299,10 +306,10 @@ presentation:
               xLabel: ""
               yLabel: ""
             style:
-              size: 15 15
+              size: 25 25
             position:
-              x: 15
-              y: 25
+              x: 75
+              y: 50
             animation: 1
       -slide:
         -title: "Visualisation d'équations"

@@ -1122,6 +1122,16 @@ function generateParagraph(
 function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: String[], animationData?: AnimationData) {
   const plotId = `plot_${PLOT_COUNTER++}`;
 
+  const plotStyles = styles.filter(s => !s.includes('fit-content'));
+
+  const finalStyles = [
+    'width: 80%;',
+    'height: 60%;',
+    'min-height: 300px;',
+    'visibility: hidden;',
+    ...plotStyles
+  ];
+
   const animationClass = animationData?.classes ?? '';
   const animationAttributes = animationData?.attributes ?? '';
 
@@ -1129,8 +1139,8 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 
   fileNode.append(`<div ${classAttr} ${animationAttributes}`);
 
-  if (styles.length > 0) {
-    fileNode.append(` style="${styles.join(' ')}"`);
+  if (finalStyles.length > 0) {
+    fileNode.append(` style="${finalStyles.join(' ')}"`);
   }
 
   fileNode.append(`>`);
@@ -1152,27 +1162,53 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
     : 'Study hours: %{x}<br>Score: %{y}<extra></extra>';
 
   fileNode.append(`
-<script>
-(function () {
-  const trace = {
-    x: ${JSON.stringify(x)},
-    y: ${JSON.stringify(y)},
-    type: "${plotType}",
-    mode: "${plotType === 'scatter' ? 'markers' : 'lines'}",
-    ${hasLabels ? `text: ${JSON.stringify(labels)},` : ''}
-    hovertemplate: ${JSON.stringify(hoverTemplate)}
-  };
+  <script>
+  (function () {
+    const trace = {
+      x: ${JSON.stringify(x)},
+      y: ${JSON.stringify(y)},
+      type: "${plotType}",
+      mode: "${plotType === 'scatter' ? 'markers' : 'lines'}",
+      ${hasLabels ? `text: ${JSON.stringify(labels)},` : ''}
+      hovertemplate: ${JSON.stringify(hoverTemplate)}
+    };
 
-  const layout = {
-    margin: { t: 20 },
-    ${xLabel ? `xaxis: { title: ${JSON.stringify(xLabel)} },` : ''}
-    ${yLabel ? `yaxis: { title: ${JSON.stringify(yLabel)} },` : ''}
-  };
+    const layout = {
+      autosize: true,
+      margin: { t: 30, l: 40, r: 20, b: 40 },
+      ${xLabel ? `xaxis: { title: ${JSON.stringify(xLabel)} },` : ''}
+      ${yLabel ? `yaxis: { title: ${JSON.stringify(yLabel)} },` : ''}
+    };
 
-  Plotly.newPlot("${plotId}", [trace], layout, { responsive: true });
-})();
-</script>
-`);
+    function renderPlot_${plotId}() {
+      const el = document.getElementById("${plotId}");
+      if (!el) return;
+
+      const slide = el.closest("section");
+      if (!slide || !slide.classList.contains("present")) return;
+
+      Plotly.newPlot("${plotId}", [trace], layout, { responsive: true });
+      el.parentElement.style.visibility = "visible";
+    }
+
+    function bindReveal_${plotId}() {
+      if (!window.Reveal || !Reveal.isReady()) return false;
+
+      Reveal.on("ready", renderPlot_${plotId});
+      Reveal.on("slidechanged", renderPlot_${plotId});
+      renderPlot_${plotId}();
+
+      return true;
+    }
+
+    if (!bindReveal_${plotId}()) {
+      const i = setInterval(() => {
+        if (bindReveal_${plotId}()) clearInterval(i);
+      }, 50);
+    }
+  })();
+  </script>
+  `);
 }
 
 function resolveBackground(background: string | BackgroundValue): string {
