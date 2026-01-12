@@ -34,7 +34,6 @@ presentation:
             - "Visualisation de code"
             - "Positionnement de nos éléments"
             - "Quiz en live"
-            - "Quiz en mode hors connexion"
             - "Plot"
             - "Visualisation d'équations"
             - "Analyse critique "
@@ -99,7 +98,7 @@ presentation:
                 style:
                   size: 15 15
                 position:
-                    x: right
+                    x: 80
                     y: bottom
                     z: back
             -image: "https://www.svgrepo.com/show/501182/equation.svg"
@@ -233,5 +232,105 @@ presentation:
         style:
           backgroundColor: #e0f23d
           font: 16
+    -slide:
+      -title: "Utilisation de graphique"
+        style:
+          font: 28
+      -text: "Cliquer pour faire apparaître le graphique. Chaque point représente un étudiant."
+        style:
+          font: 20
+
+    
+        -plot:
+            type: scatter
+            data:
+              xAxis: [1, 2, 3, 4, 5]
+              yAxis: [8, 10, 12, 15, 18]
+              labels:
+                ["Student A", "Student B", "Student C", "Student D", "Student E"]
+            layout:
+              xLabel: "Study hours"
+              yLabel: "Test score"
+            style:
+              size: 15 15
+            position:
+              x: 70
+              y: 25
+            animation: 1
+
+
+        -plot:
+            type: bar
+            data:
+              xAxis: [1, 2, 3, 4]
+              yAxis: [85, 90, 78, 88]
+            labels:
+              ["Math", "Science", "History", "Art"]
+            layout:
+              xLabel: "Subjects"
+              yLabel: "Average Score"
+            style:
+              size: 15 15
+            position:
+              x: 70
+              y: 70
+            animation: 1
+
+        -plot:
+            type: line
+            data:
+              xAxis: [1, 2, 3, 4, 5]
+              yAxis: [2, 3, 5, 7, 11]
+            layout:
+              xLabel: "Time"
+              yLabel: "Value"
+            style:
+              size: 15 15
+            position:
+              x: 15
+              y: 70
+            animation: 1
+        -plot:
+            type: bar
+            data:
+              xAxis: [1, 2, 3, 4, 5, 6, 7, 8]
+              yAxis: [5, 2, 6, 3, 7, 4, 5, 6]
+            layout:
+              xLabel: ""
+              yLabel: ""
+            style:
+              size: 15 15
+            position:
+              x: 15
+              y: 25
+            animation: 1
+      -slide:
+        -title: "Visualisation d'équations"
+          style:
+            font: 28 
+        -text: "TODO: mettre un exemple de visualisation d'équations"
+          style:
+            backgroundColor: #e0f23d
+            font: 16
+      -slide:
+        -title: "Analyse critique "
+          style:
+            font: 28
+        -text: "TODO: mettre une analyse critique de notre DSL et des améliorations possibles"
+          style:
+            backgroundColor: #e0f23d
+            font: 16
+      -slide:
+        -title: "Merci pour votre attention !"
+          style:
+            font: 28
+        -text: "Des questions ?"
+          style:
+            font: 16
+        -text: "Cette slide à été fait grâce à un template de présentation en SML. Vous pouvez trouver le template dans le dossier template de notre dépôt."
+          style:
+            font: 12
+
+   
    
         
