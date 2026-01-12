@@ -1146,15 +1146,10 @@ function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) 
     content = content.substring(1, content.length - 1);
   }
 
-  // Display mode: block equation (centered, larger)
-  // Inline mode: inline equation (smaller, within text flow)
-  const isDisplay = equation.display ?? false;
+  // Handle text alignment (default is center)
+  const alignStyle = equation.align ? `text-align: ${equation.align};` : 'text-align: center;';
 
-  if (isDisplay) {
-    // Block equation using \[...\] delimiters (MathJax display mode)
-    fileNode.append(`<div class="equation-display">\\[${content}\\]</div>`);
-  } else {
-    // Inline equation using \\(...\\) delimiters (MathJax inline mode)
-    fileNode.append(`<span class="equation-inline">\\(${content}\\)</span>`);
-  }
+  // Always use display mode (block equation, centered, larger)
+  // Block equation using \[...\] delimiters (MathJax display mode)
+  fileNode.append(`<div class="equation-display" style="${alignStyle}">\\[${content}\\]</div>`);
 }

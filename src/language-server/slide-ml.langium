@@ -94,9 +94,8 @@ CodeExplanation:
   '-' line=NUMBER ":" content=STRING;
 
 Equation:
-  'equation:'
-  ('display:' display=BOOLEAN)?
-  'content:' content=STRING;
+  'equation:' content=STRING
+  ('align:' align=TextAlignment)?;
 
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
