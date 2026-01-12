@@ -2,6 +2,7 @@ presentation:
     name: "Style tests!" 
     author: "ALLAIN Emma, Jessica Kahungu, Antoine Fadda-Rodriguez, Yannick "
     displaySlideNumber: true
+    template: "finalPresentationTemplate"
     slides:
       -slide:
           -title: "Slide Deck ML"
