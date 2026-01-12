@@ -4,6 +4,7 @@ import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } f
 import { PreviewPanel } from './preview/preview-panel';
 
 let client: LanguageClient;
+let updateTimer: NodeJS.Timeout | undefined;
 
 // This function is called when the extension is activated.
 export function activate(context: vscode.ExtensionContext): void {
@@ -23,12 +24,20 @@ export function activate(context: vscode.ExtensionContext): void {
   // Update preview when document changes
   const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
     if (e.document.languageId === 'slide-ml' && PreviewPanel.currentPanel) {
-      // Debounce updates
-      setTimeout(() => {
-        if (PreviewPanel.currentPanel) {
-          PreviewPanel.currentPanel.updateContent(e.document);
+      // Check if it's the current document being previewed
+      if (PreviewPanel.currentPanel.isPreviewingDocument(e.document)) {
+        // Cancel previous timer
+        if (updateTimer) {
+          clearTimeout(updateTimer);
         }
-      }, 500);
+        // Debounce updates
+        updateTimer = setTimeout(() => {
+          if (PreviewPanel.currentPanel) {
+            PreviewPanel.currentPanel.updateContent(e.document);
+          }
+          updateTimer = undefined;
+        }, 500);
+      }
     }
   });
   context.subscriptions.push(changeDocumentSubscription);
@@ -36,7 +45,8 @@ export function activate(context: vscode.ExtensionContext): void {
   // Update preview when active editor changes
   const changeEditorSubscription = vscode.window.onDidChangeActiveTextEditor((editor) => {
     if (editor && editor.document.languageId === 'slide-ml' && PreviewPanel.currentPanel) {
-      PreviewPanel.currentPanel.updateContent(editor.document);
+      // Only update if it's a different document
+      PreviewPanel.currentPanel.updateContentIfDifferent(editor.document);
     }
   });
   context.subscriptions.push(changeEditorSubscription);
