@@ -246,38 +246,140 @@ presentation:
         type: zoom-in
         duration: slow
       -title: "effets et styles"
+      -text:   "Colored background"
+          style:
+            backgroundColor: #f14b4b
+      -text:   "Rotated block"
+          style:
+            rotation: 45
+          position:
+            z:1
+          animation: 1
+      -text:   "Rotated colored wide block"
+          style:
+            size: 70 70
+            backgroundColor: #0bac0b
+            rotation: 45
+          position:
+            z:2
+          animation: 2
+      -text:   "Stretched block"
+          style:
+            size: 10 auto
+            backgroundColor: #555
+          position:
+            z:3
+          animation: 3
+      -text:   "Normal block"
         style:
-          font: 28 
-      -text: "TODO: mettre les effets et le bout de code langium "
+          backgroundColor: #888
+        position:
+            z:4
+          animation: 4
+      -text:   "Wide block"
         style:
-          backgroundColor: #e0f23d
-          font: 16
-      -image: "images/annotation-example.png"
+          size: 80 auto
+          backgroundColor: #aaa
+        position:
+            z:5
+          animation: 5
+      -text:   "Text with custom font"
+        style:
+          backgroundColor: #a0a005
+          font: "Times New Roman"
+        position:
+            z:6
+          animation: 6
+      -text:   "Text with custom font size"
+        style:
+          backgroundColor: #a0a005
+          font: 30
+        position:
+            z:7
+          animation: 7
+      -text:   "Text with custom font color"
+        style:
+          backgroundColor: #a0a005
+          font:
+            color: #2a2a72
+        position:
+            z:8
+          animation: 8
+      -text: "Text with all customizations"
+        style:
+          backgroundColor: #5a05a0
+          font: "Courier New" 64
+            color: #ff00ff
+        position:
+          x:50
+          y:50
+          z:9
+          animation: 9
+      -group:[
+        style:
+          size: 80 80
+          backgroundColor: #ccc
+          position:
+            x: left
+            y: center
+            z:10
+          animation:10
+        -text: "top center in the parent group"
+          style:
+            backgroundColor: #888
+            position: center top
+        -text: "left center in the parent group"
+          style:
+            backgroundColor: #888
+            position: left center
+        -group:[ 
+          style:
+            size: 50 50
+            backgroundColor: #888
+            font:
+              color: "lightgrey"
+            position: right bottom
+          -text: "50 top in the parent group"
             style:
-                size: 60 40
+              backgroundColor: #522
+              position: 50 top
+          -text: "left 50 in the parent group"
+            style:
+              backgroundColor: #252
+              position: left 50
+          -text: "right bottom in the parent group"
+            style:
+              backgroundColor: #225
+              position: right bottom
+        ]
+      ]
     -slide:
       transition:
           type: slide
           duration: slow
       -title: "Acceptance de notre DSL "
-        style:
-          font: 28 
       -text: "Pour aider l'utilisateur à accepter notre DSL nous avons mis en place une extension de preview qui permet de visualiser le rendu final de son document au fur et à mesure de la rédaction. Voici un exemple d'utilisation:"
         style:
           font: 16
+          position:
+          y:20
       -video: "videos/demo-preview.mp4"
             style:
-                size: 60 40
+                size: 65 65
+            position: 
+            x:center
+            y:55
     -slide:
       transition:
         type: fade
         duration: default
       -title:   "Visualisation de code"
-        style:
-          font: 28
-      -text: "Voici un exemple de code static en python:"
+      -text: "**Voici un exemple de code statique en python:**"
         style:
           font: 16
+        position:
+          x:30
+          y:35
       -code:
         language: "python"  
         "
@@ -287,18 +389,32 @@ presentation:
               else:
                   return n * factorial(n - 1)
         "
-      -text: "Voici un exemple de code avec animation ligne par ligne:"
+        position:
+          x:65
+          y:35
+      -text: "**Voici un exemple de code javascript avec animation:**"
         style:
           font: 16
-      -code:
-        language: "python"
-        animated: true  
-        " 
-          sum = 0
-          for i in range(10):
-              sum += i
-              print(sum)
-        "
+        position:
+          x: 25
+          y:70
+        animation: 1
+      - code:
+        language: "javascript"
+        animated: true 
+          "
+          const x = 1;
+          const y = 2;
+          const z = x + y;
+          "
+        explanations:
+          - 2: "Declares a constant x with value 1"
+          - 3: "Declares a constant y with value 2"
+          - 4: "Declares a constant z as the sum of x and y"
+        position:
+          x:55
+          y:70
+        animation: 1
     -slide:
       transition:
         type: slide
@@ -355,16 +471,7 @@ presentation:
           font: 16
     -slide:
       -title: "Utilisation de graphique"
-        style:
-          font: 28
-      -text: "Cliquer pour faire apparaître le graphique. Chaque point représente un étudiant."
-        style:
-          font: 20
-
-      -group:[
-        position:
-          x: 70
-          y: 25
+      -text: "Cliquer pour faire apparaître les différents graphiques (bar, chart, scatter)."
         -plot:
           type: scatter
           data:
@@ -377,8 +484,10 @@ presentation:
             yLabel: "Test score"
           style:
             size: 25 25
+          position:
+              x: 30
+              y: 35
           animation: 1
-      ]
         -plot:
             type: bar
             data:
@@ -392,18 +501,9 @@ presentation:
             style:
               size: 25 25
             position:
-              x: 75
-              y: 50
+              x: 70
+              y: 35
             animation: 1
-
-      -slide:
-        -title: "Utilisation de graphique"
-          style:
-            font: 28
-        -text: "Cliquer pour faire apparaître le graphique. Chaque point représente un étudiant."
-          style:
-            font: 20
-
         -plot:
             type: line
             data:
@@ -415,8 +515,8 @@ presentation:
             style:
               size: 25 25
             position:
-              x: 25
-              y: 50
+              x: 70
+              y: 70
             animation: 1
         -plot:
             type: bar
@@ -429,9 +529,10 @@ presentation:
             style:
               size: 25 25
             position:
-              x: 75
-              y: 50
+              x: 30
+              y: 70
             animation: 1
+
       -slide:
       transition:
         type: zoom-in
@@ -448,8 +549,6 @@ presentation:
         type: concave
         duration: default    
         -title: "Analyse critique "
-          style:
-            font: 28
         -text: "TODO: mettre une analyse critique de notre DSL et des améliorations possibles"
           style:
             backgroundColor: #e0f23d
@@ -459,14 +558,20 @@ presentation:
         type: fade-out
         duration: fast
         -title: "Merci pour votre attention !"
-          style:
+        -text: "Avez vous des questions ?"
+          style: 
             font: 28
-        -text: "Des questions ?"
-          style:
-            font: 16
-        -text: "Cette slide à été fait grâce à un template de présentation en SML. Vous pouvez trouver le template dans le dossier template de notre dépôt."
+          position:
+            x:50
+            y: 20
+        -image: "https://www.svgrepo.com/show/307945/message-received.svg"
+          style: 
+            size: 80 80
+        -text: "**Cette présentation a été faite grâce à un template de présentation en SML. Vous pouvez trouver le template dans le dossier template de notre dépôt.**"
           style:
             font: 12
+          position: 
+            y: 85
 
    
    
