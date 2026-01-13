@@ -27,16 +27,15 @@ presentation:
       -title:   "Line animated Code"
       - code:
         language: "javascript"
-        animated: true 
+        codeAnimation: 1..2|3
           "
-          const x = 1;
+          const x = 1; 
           const y = 2;
           const z = x + y;
           "
         explanations:
-          - 1: "Declares a constant x with value 1"
-          - 2: "Declares a constant y with value 2"
-          - 3: "Declares a constant z as the sum of x and y"
+          - 1: "Declares a constant x with value 1 anda constant y with value 2"
+          - 2: "Declares a constant z as the sum of x and y"
     -slide:
       -text: "Image issue du web"
             style:
