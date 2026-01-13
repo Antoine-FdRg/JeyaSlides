@@ -77,11 +77,12 @@ Element:
   Text | Image | Video | Quiz | Group | Plot;
 
 Group:
-  'group:'
+  'group:' '['
     (style=Style)?
     (position=Position)?
     (animation=Animation)?
     ('-'elements+=Element)+
+  ']'
 ;
 
 Text:

@@ -19,7 +19,6 @@ export class PreviewPanel {
   private _currentDocument: vscode.TextDocument | undefined;
   private _lastSlidePosition: SlidePosition = { h: 0, v: 0, f: 0 };
   private _isUpdating: boolean = false;
-  private _lastContentHash: string = '';
 
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
     this._panel = panel;
@@ -76,13 +75,7 @@ export class PreviewPanel {
   }
 
   public updateContent(document: vscode.TextDocument) {
-    // Only update if content actually changed
-    const newContentHash = this._getContentHash(document);
-    if (newContentHash === this._lastContentHash) {
-      return; // Content hasn't changed, keep slide position
-    }
-
-    this._lastContentHash = newContentHash;
+    // Always update - debouncing is handled in extension.ts
     this._currentDocument = document;
     this._updateWebview();
   }
@@ -90,27 +83,14 @@ export class PreviewPanel {
   public updateContentIfDifferent(document: vscode.TextDocument) {
     // Only update if it's a different document (ignore same doc to avoid reset on click)
     if (!this._currentDocument || this._currentDocument.uri.toString() !== document.uri.toString()) {
-      this._lastContentHash = this._getContentHash(document);
       this._currentDocument = document;
       this._updateWebview();
     }
-    // If same document, don't do anything (not even content check)
+    // If same document, don't do anything
   }
 
   public isPreviewingDocument(document: vscode.TextDocument): boolean {
     return !!this._currentDocument && this._currentDocument.uri.toString() === document.uri.toString();
-  }
-
-  private _getContentHash(document: vscode.TextDocument): string {
-    // Simple hash of content to detect real changes
-    const content = document.getText();
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash.toString();
   }
 
   private async _updateWebview() {

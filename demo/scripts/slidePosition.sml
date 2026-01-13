@@ -84,7 +84,7 @@ presentation:
           backgroundColor: #bdbdbd
           position: center front
     -slide:
-      -group:
+      -group:[
         style:
           size: 80 80
           backgroundColor: #ccc
@@ -99,7 +99,7 @@ presentation:
           style:
             backgroundColor: #888
             position: left center
-        -group: 
+        -group:[ 
           style:
             size: 50 50
             backgroundColor: #888
@@ -118,3 +118,5 @@ presentation:
             style:
               backgroundColor: #225
               position: right bottom
+        ]
+      ]
