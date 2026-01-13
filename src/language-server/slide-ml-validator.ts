@@ -27,173 +27,32 @@ export class SlideMLValidator {
   validate(node: AstNode, accept: ValidationAcceptor): void {
     const $cstNode = node.$cstNode;
     if (!$cstNode) return;
-
-    const text = $cstNode.text;
-    const lines = text.split(/\r?\n/);
-
-    // Vérifier le format des liens d'image
-    this.checkImageLinks(node, accept);
-
-    // Vérifier le format des liens de vidéo
-    this.checkVideoLinks(node, accept);
-    // Vérifier les valeurs de 'type' et 'duration' pour transition/animation
-    this.checkTransitionAndDurationValues(node, lines, accept);
   }
 
-  private checkImageLinks(node: AstNode, accept: ValidationAcceptor): void {
-    const imageLinks = this.extractImageLinks(node);
-    imageLinks.forEach((link) => {
-      if (!this.isValidLink(link)) {
-        accept('warning', 'Le lien de l’image semble étrange, veuillez vérifier : ' + link, { node });
-      }
-    });
-  }
+  validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
+    if (!node.$cstNode) return;
+    if (node.$type === 'Font') {
+      const font = node as Font;
 
-  private extractImageLinks(node: AstNode): string[] {
-    const links: string[] = [];
-    // Logique pour extraire les liens d'images du nœud
-    // Cela dépend de la structure de votre AST
-    // Exemple d'extraction :
-    if (node.$cstNode) {
-      const text = node.$cstNode.text;
-      const regex = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)/g;
-      let match;
-      while ((match = regex.exec(text)) !== null) {
-        links.push(match[0]);
+      const isEmpty =
+        font.name === undefined &&
+        font.size === undefined &&
+        font.color === undefined &&
+        (!font.transformations || font.transformations.length === 0);
+
+      if (isEmpty) {
+        accept('error', `La balise font ne doit pas être vide.`, { node });
       }
+      return;
     }
-    return links;
-  }
 
-  private isValidLink(link: string): boolean {
-    // Logique pour vérifier si le lien est valide
-    return link.startsWith('http') || link.startsWith('https');
-  }
+    const fieldName = node.$type;
+    const textAfterColon = node.$cstNode.text.split(':')[1]?.trim();
 
-  private checkVideoLinks(node: AstNode, accept: ValidationAcceptor): void {
-    const videoLinks = this.extractVideoLinks(node);
-    videoLinks.forEach((link) => {
-      if (!this.isValidLink(link)) {
-        accept('warning', 'Le lien de la vidéo semble étrange, veuillez vérifier : ' + link, { node });
-      }
-    });
-  }
-
-  private extractVideoLinks(node: AstNode): string[] {
-    const links: string[] = [];
-    // Logique pour extraire les liens de vidéos du nœud
-    // Cela dépend de la structure de votre AST
-    // Exemple d'extraction :
-    if (node.$cstNode) {
-      const text = node.$cstNode.text;
-      const regex = /https?:\/\/[^\s]+\.(mp4|avi|mov|wmv)/g;
-      let match;
-      while ((match = regex.exec(text)) !== null) {
-        links.push(match[0]);
-      }
-    }
-    return links;
-  }
-  private checkTransitionAndDurationValues(node: AstNode, lines: string[], accept: ValidationAcceptor): void {
-    const validDurations = ['fast', 'default', 'slow'];
-
-    let currentSection: string | null = null;
-
-    for (const element of lines) {
-      const rawLine = element;
-      if (this.isIgnoredLine(rawLine)) continue;
-
-      const indent = this.getIndent(rawLine);
-      const trimmed = rawLine.trim();
-
-      currentSection = this.detectSection(trimmed, indent, currentSection);
-
-      if (this.isTypeLine(trimmed)) {
-        this.validateTypeLine(trimmed, currentSection, accept, node);
-      } else if (this.isDurationLine(trimmed)) {
-        this.validateDurationLine(trimmed, currentSection, validDurations, accept, node);
-      }
+    if (textAfterColon === '') {
+      accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
     }
   }
-
-  private isIgnoredLine(line: string | undefined): boolean {
-    if (!line) return true;
-    const t = line.trim();
-    return !t || t.startsWith('//') || t.startsWith('/*');
-  }
-
-  private getIndent(line: string): number {
-    const m = line.match(/^(\s*)/);
-    return m ? m[1].length : 0;
-  }
-
-  private detectSection(trimmed: string, indent: number, currentSection: string | null): string | null {
-    if (/^transition:\s*$/i.test(trimmed)) return 'transition';
-    if (/^animation:\s*$/i.test(trimmed)) return 'animation';
-    if (/^[a-zA-Z_-]+:\s*$/.test(trimmed) && indent === 0) return null;
-    return currentSection;
-  }
-
-  private isTypeLine(trimmed: string): boolean {
-    return /^type:\s*/i.test(trimmed);
-  }
-
-  private isDurationLine(trimmed: string): boolean {
-    return /^duration:\s*/i.test(trimmed);
-  }
-
-  private validateTypeLine(trimmed: string, currentSection: string | null, accept: ValidationAcceptor, node: AstNode) {
-    if (currentSection !== 'transition') return;
-    const after = trimmed.split(':')[1] || '';
-    const tokens = after.trim().split(/\s+/).filter(Boolean);
-    for (const tok of tokens) {
-      const m = tok.match(/^(none|fade|slide|convex|concave|zoom)(-in|-out)?$/i);
-      if (!m) {
-        accept('warning', 'vous avez inscrit une valeur inccorecte', { node, property: undefined });
-        break;
-      }
-    }
-  }
-
-  private validateDurationLine(
-    trimmed: string,
-    currentSection: string | null,
-    validDurations: string[],
-    accept: ValidationAcceptor,
-    node: AstNode,
-  ) {
-    if (currentSection !== 'transition') return;
-    const after = trimmed.split(':')[1] || '';
-    const val = after.trim().split(/\s+/)[0] || '';
-    if (!validDurations.includes(val)) {
-      accept('warning', 'vous avez inscrit une valeur inccorecte', { node, property: undefined });
-    }
-  }
-
-validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
-  if (!node.$cstNode) return;
-  if (node.$type === 'Font') {
-    const font = node as Font;
-
-    const isEmpty =
-      font.name === undefined &&
-      font.size === undefined &&
-      font.color === undefined &&
-      (!font.transformations || font.transformations.length === 0);
-
-    if (isEmpty) {
-      accept('error', `La balise font ne doit pas être vide.`, { node });
-    }
-    return;
-  }
-
-  const fieldName = node.$type;
-  const textAfterColon = node.$cstNode.text.split(':')[1]?.trim();
-
-  if (textAfterColon === '') {
-    accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
-  }
-}
 
   validatePosition(node: AstNode, accept: ValidationAcceptor): void {
     if (node.$cstNode) {
