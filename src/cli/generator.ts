@@ -146,12 +146,11 @@ function generateRevealJs(
   }
   `
       : ''
-  }
-/* =======================
-   Mentimeter (Quiz iframe)
-   ======================= */
+  }/* =========================
+   Mentimeter – Quiz iframe
+   ========================= */
 
-/* Ratio wrapper (identique snippet officiel 16:9) */
+/* Wrapper ratio 16:9 (Mentimeter officiel) */
 .menti-embed {
   position: relative;
   width: 100%;
@@ -170,45 +169,58 @@ function generateRevealJs(
   display: block;
 }
 
-/* Overlay QR */
+/* =========================
+   QR Code (responsive)
+   ========================= */
+
+/* Taille du QR proportionnelle au quiz */
 .menti-qr {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 9999;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+
+  /* 👉 ajuste ici si besoin */
+  --qr-size: clamp(80px, 18%, 140px);
 
   display: flex;
   align-items: center;
   justify-content: center;
-
-  background: rgba(20, 20, 20, 0.92);
-  color: #fff;
-  padding: 14px;
-  border-radius: 12px;
 }
 
+/* Boîte blanche du QR */
 .menti-qr .qr {
-  background: #fff;
   padding: 10px;
+  background: #fff;
   border-radius: 12px;
+  box-sizing: border-box;
 }
 
+/* Canvas / image générée par QRCode.js */
+.menti-qr canvas,
+.menti-qr img {
+  width: var(--qr-size) !important;
+  height: var(--qr-size) !important;
+  display: block;
+}
+
+/* Masqué sur petits écrans */
 @media (max-width: 1100px) {
   .menti-qr {
     display: none;
   }
 }
 
-/* =======================
-   Intégration Reveal.js
-   ======================= */
+/* =========================
+   Reveal.js integration
+   ========================= */
 
 .has-quiz .slide-content {
   padding: 0 !important;
   align-items: stretch !important;
 }
 
-/* wrapper du quiz : largeur contrôlée (tu peux garder max-width si tu veux éviter full-bleed) */
+/* Wrapper global du quiz */
 .quiz-wrap {
   width: 100%;
   max-width: 1400px;
@@ -217,15 +229,29 @@ function generateRevealJs(
   overflow: hidden;
 }
 
-/* overwrite si des styles inline mettent width: fit-content */
-.has-quiz .quiz-wrap {
-  width: 100% !important;
+/* Cas par défaut : pas de size dans la grammaire */
+.quiz-default {
+  width: 60%;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-/* =======================
-   Si style.size est utilisé
-   -> on met l'iframe en "fill"
-   ======================= */
+/* Cas size explicite */
+.quiz-sized {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+/* Le ratio Mentimeter s’adapte toujours au conteneur */
+.quiz-default .menti-embed,
+.quiz-sized .menti-embed {
+  width: 100%;
+}
+
+/* =========================
+   Size explicite (fill)
+   ========================= */
 
 .menti-box {
   position: relative;
@@ -242,30 +268,6 @@ function generateRevealJs(
   border: 0;
   display: block;
 }
-/* =========================
-   Quiz sizing logic
-   ========================= */
-
-/* Cas par défaut : pas de size */
-.quiz-default {
-  width: 30%;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-/* Cas size explicite dans la grammaire */
-.quiz-sized {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
-/* Le ratio Mentimeter s'adapte au conteneur */
-.quiz-default .menti-embed,
-.quiz-sized .menti-embed {
-  width: 100%;
-}
-
 
 
 
@@ -359,25 +361,38 @@ function generateRevealJs(
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-  function renderQuizQRCodes(scope) {
-    if (typeof QRCode !== 'function') return;
+  function getQrSizeFromCSS(el) {
+  const style = getComputedStyle(el.closest('.menti-qr'));
+  const size = style.getPropertyValue('--qr-size');
+  return parseInt(size, 10) || 120;
+}
 
-    const root = scope || document;
-    root.querySelectorAll('[data-qr-target]').forEach((box) => {
-      const target = box.getAttribute('data-qr-target');
-      const id = box.getAttribute('data-qr-id');
-      if (!id || !target) return;
+function renderQuizQRCodes(scope) {
+  if (typeof QRCode !== 'function') return;
 
-      const el = document.getElementById(id);
-      if (!el) return;
+  const root = scope || document;
 
-      if (el.getAttribute('data-qr-done') === '1') return;
+  root.querySelectorAll('[data-qr-target]').forEach((box) => {
+    const target = box.getAttribute('data-qr-target');
+    const id = box.getAttribute('data-qr-id');
+    if (!id || !target) return;
 
-      el.innerHTML = '';
-      new QRCode(el, { text: target, width: 140, height: 140 });
-      el.setAttribute('data-qr-done', '1');
+    const el = document.getElementById(id);
+    if (!el || el.dataset.qrDone === '1') return;
+
+    const size = getQrSizeFromCSS(el);
+
+    el.innerHTML = '';
+    new QRCode(el, {
+      text: target,
+      width: size,
+      height: size,
     });
-  }
+
+    el.dataset.qrDone = '1';
+  });
+}
+
 
   Reveal.on('ready', function () {
     renderQuizQRCodes(document);
@@ -430,6 +445,44 @@ function generateRevealJs(
       Reveal.on('fragmentshown', updateCodeExplanations);
       Reveal.on('fragmenthidden', updateCodeExplanations);
     <\/script>
+    <script>
+  function setupMentiQrAutoHide(scope) {
+    const root = scope || document;
+    const wrap = root.querySelector('.quiz-wrap');
+    const qr = root.querySelector('.menti-qr');
+    if (!wrap || !qr) return;
+
+    // reset quand on (re)arrive sur la slide
+    qr.style.display = 'flex';
+    wrap.dataset.qrHidden = '0';
+
+    const hide = () => {
+      if (wrap.dataset.qrHidden === '1') return;
+      qr.style.display = 'none';
+      wrap.dataset.qrHidden = '1';
+    };
+
+    // 1) clic/tap sur le conteneur
+    wrap.addEventListener('pointerdown', hide, { once: true });
+
+    // 2) focus dans l'iframe (souvent déclenché quand on clique dedans)
+    const iframe = root.querySelector('.menti-embed iframe, .menti-box iframe');
+    if (iframe) {
+      iframe.addEventListener('load', () => {
+        // Quand l'iframe recharge, on ne fait rien (Mentimeter peut reload),
+        // mais on peut au moins rebrancher un écouteur focus si besoin
+      });
+      iframe.addEventListener('focus', hide, { once: true });
+    }
+
+    // 3) fallback : si l'utilisateur clique dans l'iframe, le focus passe à l'iframe
+    // (blur window est souvent déclenché)
+    window.addEventListener('blur', hide, { once: true });
+  }
+
+  Reveal.on('ready', (e) => setupMentiQrAutoHide(e.currentSlide || document));
+  Reveal.on('slidechanged', (e) => setupMentiQrAutoHide(e.currentSlide));
+</script>
 
   </body>
   </html>`);
@@ -817,6 +870,19 @@ function escapeHtml(s: string): string {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 }
+function quizHasExplicitSize(quizNode: Quiz): boolean {
+  const s = quizNode.style?.size;
+  if (!s) return false;
+
+  const w = s.width?.value;
+  const h = s.height?.value;
+
+  const hasW = w !== undefined && w !== 'auto';
+  const hasH = h !== undefined && h !== 'auto';
+
+  return hasW || hasH;
+}
+
 function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
   if (!quizNode.link) return;
   const raw = sanitizeLink(quizNode.link);
@@ -841,8 +907,7 @@ function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
 
   const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
 
-  const hasSize = !!quizNode.style?.size?.width || !!quizNode.style?.size?.height;
-
+  const hasSize = quizHasExplicitSize(quizNode);
   const wrapperClass = hasSize ? 'menti-box' : 'menti-embed';
 
   fileNode.append(`
@@ -883,7 +948,7 @@ function generateQuiz(
 ) {
   const animationClass = animationData?.classes || '';
   const animationAttributes = animationData?.attributes || '';
-  const hasSize = quizNode.style?.size?.width !== undefined || quizNode.style?.size?.height !== undefined;
+  const hasSize = quizHasExplicitSize(quizNode);
   const sizeClass = hasSize ? 'quiz-sized' : 'quiz-default';
 
   fileNode.append(
