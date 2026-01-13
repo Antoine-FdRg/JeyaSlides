@@ -551,9 +551,6 @@ function getElementStyles(element: Element): string[] {
   if (element.style.backgroundColor) {
     styles.push(resolveBackground(element.style.backgroundColor));
   }
-  if (element.style.rotation) {
-    styles.push(`transform: rotate(${element.style.rotation}deg);`);
-  }
   styles.push(...(getSizeStyles(element) || []));
   styles.push(...(getFontStyles(element) || []));
   return styles;
@@ -639,7 +636,7 @@ function getElementPosition(element: Element): string {
   getXPosition(X, positionStyles, transformStyles);
   getYPosition(Y, positionStyles, transformStyles);
   getZPosition(element.position.z, positionStyles);
-
+  getRotation(element,transformStyles);
   if (X || Y) {
     positionStyles.unshift('position: absolute;'); // position absolute si une position est définie pour positionner par rapport au conteneur parent
   }
@@ -648,6 +645,12 @@ function getElementPosition(element: Element): string {
     positionStyles.push(`transform: ${transformStyles.join(' ')};`);
   }
   return positionStyles.join(' ');
+
+  function getRotation(element: Element, transformStyles: string[]) {
+    if (element.style && element.style.rotation) {
+      transformStyles.push(`rotate(${element.style.rotation}deg)`);
+    }
+  }
 
   /**
    * Ajoute les styles de positionnement horizontal à la liste des styles et de transformation
