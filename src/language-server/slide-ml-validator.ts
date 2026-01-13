@@ -18,8 +18,6 @@ export function registerValidationChecks(services: SlideMLServices) {
     XPosition: validator.validatePosition,
     YPosition: validator.validatePosition,
     Size: validator.validateUsefullSize,
-    Video: validator.validateVideo.bind(validator),
-    Image: validator.validateImage.bind(validator),
     Transition: validator.validateTransition.bind(validator),
   };
 
