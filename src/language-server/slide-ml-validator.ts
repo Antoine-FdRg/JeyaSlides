@@ -18,6 +18,9 @@ export function registerValidationChecks(services: SlideMLServices) {
     XPosition: validator.validatePosition,
     YPosition: validator.validatePosition,
     Size: validator.validateUsefullSize,
+    Video: validator.validateVideo.bind(validator),
+    Image: validator.validateImage.bind(validator),
+    Transition: validator.validateTransition.bind(validator),
   };
 
   registry.register(checks, validator);
@@ -125,6 +128,23 @@ export class SlideMLValidator {
       accept('warning', `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`, {
         node,
       });
+    }
+  }
+
+  validateTransition(node: AstNode, accept: ValidationAcceptor): void {
+    if (!node.$cstNode) return;
+    const t: any = node as any;
+    const val = t.type as string | undefined;
+    if (!val) return;
+
+    const bases = ['none', 'fade', 'slide', 'convex', 'concave', 'zoom'];
+    const suffixes = ['', '-in', '-out'];
+    const allowed = new Set<string>();
+    for (const b of bases) for (const s of suffixes) allowed.add(b + s);
+
+    if (!allowed.has(val)) {
+      const grammarRule = '/(none|fade|slide|convex|concave|zoom)(-in|-out)?/';
+      accept('error', `Transition inconnue : '${val}'. Règle attendue : ${grammarRule}`, { node });
     }
   }
 }
