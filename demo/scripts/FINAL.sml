@@ -446,13 +446,11 @@ presentation:
       transition:
         type: fade
         duration: default
-      -title: "Quiz en live"
-        style:
-          font: 28
-      -text: "TODO: mettre un exemple de quiz en live"
-        style:
-          backgroundColor: #e0f23d
-          font: 16
+      -title: "Quizz en ligne"
+        -quiz:
+            link: "https://www.mentimeter.com/app/presentation/alptvry8m1s74bf64oi2i4vkpej9wf6n/embed"
+            joinCode: "3174 5999"
+            joinUrl: "https://www.menti.com"
     -slide:
       -title: "Utilisation de graphique"
       -text: "Cliquer pour faire apparaître les différents graphiques (bar, chart, scatter)."
