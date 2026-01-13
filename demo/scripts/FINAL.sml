@@ -37,7 +37,7 @@ presentation:
           size: 75 75
           position:
             x: 45
-            y: center
+            y: 45
           -list:
               ordered: true
               - "Introduction (DM, Langium)"
@@ -53,35 +53,35 @@ presentation:
               - "Visualisation d'équations"
               - "Analyse critique "
               style:
-                font: 35
+                font: 33
         ]
         -image: "images/sommaire/archi.png"
             style:
-              size: 25 25
+              size: 23 23
             position:
               x: 80
-              y: 30
+              y: 25
               z: 10
         -image: "images/sommaire/position-preview.png"
             style:
-              size: 25 25
+              size: 23 23
             position:
               x: 70
-              y: 40
+              y: 35
               z: 15
         -image: "images/sommaire/code.png"
             style:
-                size: 30 30
+                size: 27 27
             position:
                 x: 65
-                y: 55
+                y: 50
                 z:20
         -image: "images/sommaire/graph.png"
             style:
-                size: 30 30
+                size: 27 27
             position:
                 x: 60
-                y: 75
+                y: 70
                 z: 25
         -slide:
             transition:
@@ -90,15 +90,16 @@ presentation:
             -title: "Introduction"
             -group: [
               style: 
-                size: 45 70
+                size: 45 65
                 backgroundColor: #d8f6fb
               position:
                   x: 25
-                  y: 55
-              -text: "Vous pouvez cliquer sur la photo pour voir le Domain Model en plus gros"
-                position: 
-                  x:center
+                  y: 53
+              -text: "Vous pouvez cliquer sur la photo pour voir le Domain Model en plus gros."
+                
               -image: "images/dm.png"
+              style:
+                size: 50 50
                 position: 
                   x:50
                   y:50
@@ -113,21 +114,23 @@ presentation:
                   x: 73
                   y: 55
               -text: " Nous avons basé notre DSL sur un language externe: **Langium** ? Veuillez trouvez ci-dessous une vidéo youtube explicative de comment utiliser ce language."
+                style:
+                  font: 20
               -video: "https://www.youtube.com/watch?v=YdulTVCNB0E"
                   style:
-                    size: 75 60
+                    size: 60 48
                   position:
                     x: center
-                    y: 47
+                    y: 50
               -image:  "https://www.svgrepo.com/show/398579/warning.svg"
                 style:
-                  size: 8 8
+                  size: 7 7
                   position: 
                     x:20
-                    y:87
+                    y:86
               -text: "Cette vidéo est visualisable seulement avec de la connexion interne"
                   style:
-                    font:
+                    font: 16
                       color: "red"
                   position: 
                     x:55
@@ -140,7 +143,7 @@ presentation:
             -title: "Résumé des fonctionnalités"
             -group: [
               style: 
-                size: 45 70
+                size: 45 65
                 backgroundColor: #c7c2ca
               position:
                   x: 25
@@ -148,11 +151,12 @@ presentation:
               -text: "Cette slide a pour but de lister les fonctionnalités mise en place, qui sont résumées ici... Dans le premier scénario, une étudiante prépare une présentation pour son apprentissage en important un modèle imposé par son entreprise, intégrant logos, couleurs et polices spécifiques. Elle ajoute ensuite une diapositive de titre présentant son projet, son état d’avancement et une photo de son lieu de travail, puis une diapositive de plan sous forme de liste. La présentation se poursuit avec plusieurs diapositives incluant des animations pour faire apparaître progressivement textes et images, ainsi qu’une diapositive contenant une vidéo illustrant le travail réalisé sur site. Elle termine par une diapositive de conclusion et exporte le diaporama en format web utilisable hors ligne. Dans le second scénario, un enseignant conçoit des diapositives pour une introduction à la programmation en Python. Après les diapositives d’introduction, il ajoute des diapositives contenant du code Python avec coloration syntaxique, affiché progressivement ligne par ligne grâce à des animations. Les images associées évoluent en même temps que le code pour en illustrer le fonctionnement. Enfin, certaines diapositives combinent texte et images, dont la disposition peut être adaptée selon les besoins pédagogiques. "
                 align: justify
                 style:
-                  font: 16
+                  font: 12
               
               -text: "**Ce texte est affreusement long pour une slide, nous sommes d'accord, vous pouvez utiliser le double click ou D pour annoter la slide afin de mettre en avant les éléments que vous souhaitez.**"
                 style:
-                  font: 
+                backgroundColor: #ddf338
+                  font: 15
                     color:"red"
                 position:
                   x: 50
@@ -161,7 +165,7 @@ presentation:
             ]
             -image: "https://www.svgrepo.com/show/495911/arrow-right-2.svg"
               style:
-              size: 15 15
+              size: 14 14
               position: 
                 x: 48
                 y:50
@@ -169,14 +173,14 @@ presentation:
               
             -group: [
               style: 
-                size: 45 70
+                size: 45 65
               position:
                   x: 73
                   y: 55
               animation: 2 fade-down
             -text: "Revenons à quelque chose de plus concis... Voici une liste des  __fonctionnalités implémentées __ :"
               style:
-                font: 28
+                font: 24
             -list:
                 ordered: false
                 - "Scénario 1"
@@ -188,13 +192,13 @@ presentation:
                 - "Visualisation d'équations"
                 - "Positionnement des éléments"
                 style:
-                  font: 25
+                  font: 18
               -image: "https://images.emojiterra.com/google/noto-emoji/unicode-16.0/color/svg/1f601.svg"
                 style: 
-                  size: 20 20
+                  size: 18 18
                 position:
                   x: 75
-                  y: 80
+                  y: 75
             ]
     -slide:
      transition:
@@ -203,11 +207,11 @@ presentation:
       -title: "Texte  & styles"
       -group: [
           style: 
-            size: 45 70
+            size: 55 65
             backgroundColor: #d8f6fb
           position:
-              x: 25
-              y: 55
+              x: 30
+              y: 50
     -title: "Ce texte est un titre avec une couleur différente de la template!"
       style:
         font:
@@ -225,10 +229,10 @@ presentation:
             "
         style:
           size: 10 auto
-          font: 30
+          font: 15
         position:
           x:45
-          y:65
+          y:70
 
       ]
       -text: "Voici un bout de notre language qui gère les textes."
@@ -237,6 +241,8 @@ presentation:
         y:25
         animation: 1
      -image: "images/code-text.png"
+     style:
+      size: 50 50
       position: 
         x: 75
         y: 55
@@ -249,10 +255,16 @@ presentation:
       -text:   "Colored background"
           style:
             backgroundColor: #f14b4b
+          position:
+            x:center
+            y:center
       -text:   "Rotated block"
           style:
+          backgroundColor: #f14b4b
             rotation: 45
           position:
+          x:50
+            y:50
             z:1
           animation: 1
       -text:   "Rotated colored wide block"
@@ -261,6 +273,8 @@ presentation:
             backgroundColor: #0bac0b
             rotation: 45
           position:
+          x:50
+            y:50
             z:2
           animation: 2
       -text:   "Stretched block"
@@ -268,12 +282,16 @@ presentation:
             size: 10 auto
             backgroundColor: #555
           position:
+          x:center
+            y:center
             z:3
           animation: 3
       -text:   "Normal block"
         style:
           backgroundColor: #888
         position:
+        x:center
+            y:center
             z:4
           animation: 4
       -text:   "Wide block"
@@ -281,6 +299,8 @@ presentation:
           size: 80 auto
           backgroundColor: #aaa
         position:
+        x:center
+            y:center
             z:5
           animation: 5
       -text:   "Text with custom font"
@@ -288,6 +308,8 @@ presentation:
           backgroundColor: #a0a005
           font: "Times New Roman"
         position:
+        x:center
+            y:center
             z:6
           animation: 6
       -text:   "Text with custom font size"
@@ -295,6 +317,8 @@ presentation:
           backgroundColor: #a0a005
           font: 30
         position:
+        x:center
+            y:center
             z:7
           animation: 7
       -text:   "Text with custom font color"
@@ -303,6 +327,8 @@ presentation:
           font:
             color: #2a2a72
         position:
+        x:center
+            y:center
             z:8
           animation: 8
       -text: "Text with all customizations"
@@ -317,10 +343,10 @@ presentation:
           animation: 9
       -group:[
         style:
-          size: 80 80
+          size: 60 60
           backgroundColor: #ccc
           position:
-            x: left
+            x: center
             y: center
             z:10
           animation:10
@@ -358,14 +384,14 @@ presentation:
           type: slide
           duration: slow
       -title: "Acceptance de notre DSL "
-      -text: "Pour aider l'utilisateur à accepter notre DSL nous avons mis en place une extension de preview qui permet de visualiser le rendu final de son document au fur et à mesure de la rédaction. Voici un exemple d'utilisation:"
+      -text: "Pour aider l'utilisateur à accepter notre DSL nous avons mis en place une extension de **preview** qui permet de [!visualiser le rendu!] final de son document [!au fur et à mesure de la rédaction!]. Voici un exemple d'utilisation:"
         style:
-          font: 16
+          font: 14
           position:
           y:20
       -video: "videos/demo-preview.mp4"
             style:
-                size: 65 65
+                size: 55 55
             position: 
             x:center
             y:55
@@ -412,52 +438,10 @@ presentation:
           - 3: "Declares a constant y with value 2"
           - 4: "Declares a constant z as the sum of x and y"
         position:
-          x:55
+          x:70
           y:70
         animation: 1
-    -slide:
-      transition:
-        type: slide
-        duration: slow
-      -title: "Positionnement de nos éléments"
-        style:
-          font: 28
-      -text: "TODO: voir si on peut pas faire mieux que ça"
-        style:
-          backgroundColor: #e0f23d
-          font: 16
-      -group: [
-        style: 
-          size: 80 80
-          backgroundColor: #cccccc
-          position:
-            x: left
-            y: center
-        -text: "top center in the parent group"
-          style:
-            backgroundColor: #888
-            position: center top
-        -text: "left center in the parent group"
-          style:
-            backgroundColor: #888
-            position:left center
-        -group: [
-          style:
-            size: 50 50
-            backgroundColor: #888
-            font:
-              color: "lightgrey"
-            position: right bottom
-          -text: "50 top in the parent group"
-            style:
-              backgroundColor: #522
-              position: 50 top
-          -text: "left 50 in the parent group"
-            style:
-              backgroundColor: #252
-              position: left 50
-        ]
-      ]
+  
     -slide:
       transition:
         type: fade
@@ -483,10 +467,10 @@ presentation:
             xLabel: "Study hours"
             yLabel: "Test score"
           style:
-            size: 25 25
+            size: 20 8
           position:
-              x: 30
-              y: 35
+              x: 25
+              y: 65
           animation: 1
         -plot:
             type: bar
@@ -499,10 +483,10 @@ presentation:
               xLabel: "Subjects"
               yLabel: "Average Score"
             style:
-              size: 25 25
+              size: 20 8
             position:
-              x: 70
-              y: 35
+              x: 40
+              y: 40
             animation: 1
         -plot:
             type: line
@@ -513,10 +497,10 @@ presentation:
               xLabel: "Time"
               yLabel: "Value"
             style:
-              size: 25 25
+              size: 20 8
             position:
-              x: 70
-              y: 70
+              x: 57
+              y: 65
             animation: 1
         -plot:
             type: bar
@@ -527,10 +511,10 @@ presentation:
               xLabel: ""
               yLabel: ""
             style:
-              size: 25 25
+              size: 20 8
             position:
-              x: 30
-              y: 70
+              x: 68
+              y: 40
             animation: 1
 
       -slide:
