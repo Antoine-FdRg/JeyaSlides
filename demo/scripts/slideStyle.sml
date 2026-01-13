@@ -8,6 +8,7 @@ presentation:
       -text:   "Rotated block"
           style:
             rotation: 45
+          position: center
     -slide:
       -text:   "Rotated colored wide block"
           style:
