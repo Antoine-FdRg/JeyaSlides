@@ -53,7 +53,7 @@ presentation:
               - "Visualisation d'équations"
               - "Analyse critique "
               style:
-                font: 33
+                font: 25
         ]
         -image: "images/sommaire/archi.png"
             style:
@@ -103,7 +103,7 @@ presentation:
                 position: 
                   x:50
                   y:50
-                  
+  
             ]
 
             -group: [
@@ -128,7 +128,7 @@ presentation:
                   position: 
                     x:20
                     y:86
-              -text: "Cette vidéo est visualisable seulement avec de la connexion interne"
+              -text: "Cette vidéo est visualisable seulement avec de la connexion internet."
                   style:
                     font: 16
                       color: "red"
@@ -212,11 +212,11 @@ presentation:
           position:
               x: 30
               y: 50
-    -title: "Ce texte est un titre avec une couleur différente de la template!"
+    -title: "Ce texte est un titre!"
       style:
         font:
           color: "green"
-    -subtitle: "Ce texte est un sous-titre! (Par défaut souligné)"
+    -subtitle: "Ce texte est un sous-titre!"
     -text: "Ceci est un texte simple à 12 %. Les textes suivant sont mis dans différents styles grâce à du markdown que notre générateur arrive à lire  !"
         style:
           font: 12
@@ -232,7 +232,7 @@ presentation:
           font: 15
         position:
           x:45
-          y:70
+          y:60
 
       ]
       -text: "Voici un bout de notre language qui gère les textes."
@@ -467,8 +467,8 @@ presentation:
           style:
             size: 20 8
           position:
-              x: 25
-              y: 65
+              x: 15
+              y: 60
           animation: 1
         -plot:
             type: bar
@@ -483,8 +483,8 @@ presentation:
             style:
               size: 20 8
             position:
-              x: 40
-              y: 40
+              x: 35
+              y: 45
             animation: 1
         -plot:
             type: line
@@ -497,8 +497,8 @@ presentation:
             style:
               size: 20 8
             position:
-              x: 57
-              y: 65
+              x: 55
+              y: 60
             animation: 1
         -plot:
             type: bar
@@ -511,8 +511,8 @@ presentation:
             style:
               size: 20 8
             position:
-              x: 68
-              y: 40
+              x: 75
+              y: 45
             animation: 1
 
       -slide:
