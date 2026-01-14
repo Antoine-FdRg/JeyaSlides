@@ -1,5 +1,5 @@
 import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
-import { JeyaSlidesAstType, Plot, Template } from './generated/ast';
+import { Font, JeyaSlidesAstType, Plot, Template } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
 export function registerValidationChecks(services: SlideMLServices) {
@@ -143,8 +143,7 @@ export class SlideMLValidator {
   }
 
   private validateTypeLine(trimmed: string, currentSection: string | null, accept: ValidationAcceptor, node: AstNode) {
-    if (currentSection !== 'transition' && currentSection !== 'animation') return;
-
+    if (currentSection !== 'transition') return;
     const after = trimmed.split(':')[1] || '';
     const tokens = after.trim().split(/\s+/).filter(Boolean);
     for (const tok of tokens) {
@@ -171,15 +170,30 @@ export class SlideMLValidator {
     }
   }
 
-  validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
-    if (node.$cstNode) {
-      const fieldName = node.$type;
-      const text = node.$cstNode.text.split(':')[1]?.trim() || '';
-      if (text === '') {
-        accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
-      }
+validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
+  if (!node.$cstNode) return;
+  if (node.$type === 'Font') {
+    const font = node as Font;
+
+    const isEmpty =
+      font.name === undefined &&
+      font.size === undefined &&
+      font.color === undefined &&
+      (!font.transformations || font.transformations.length === 0);
+
+    if (isEmpty) {
+      accept('error', `La balise font ne doit pas être vide.`, { node });
     }
+    return;
   }
+
+  const fieldName = node.$type;
+  const textAfterColon = node.$cstNode.text.split(':')[1]?.trim();
+
+  if (textAfterColon === '') {
+    accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
+  }
+}
 
   validatePosition(node: AstNode, accept: ValidationAcceptor): void {
     if (node.$cstNode) {
@@ -244,21 +258,14 @@ export class SlideMLValidator {
     }
 
     if (x.length > 0 && y.length > 0 && x.length !== y.length) {
-      accept(
-        'error',
-        `Les tableaux x (${x.length}) et y (${y.length}) doivent avoir la même taille.`,
-        { node }
-      );
+      accept('error', `Les tableaux x (${x.length}) et y (${y.length}) doivent avoir la même taille.`, { node });
     }
 
     const labels = data.labels?.values;
     if (labels && labels.length !== x.length) {
-      accept(
-        'warning',
-        `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`,
-        { node }
-      );
+      accept('warning', `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`, {
+        node,
+      });
     }
   }
-
 }

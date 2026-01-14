@@ -7,16 +7,19 @@ presentation:
         align: center
 
     -slide:
-      -group:
+      -group:[
         -text: "What is Superposition?"
           align: center
           style: 
             size: 80 auto
             -text:"A quantum system can exist in multiple states at once."
               align: center
-            -group:
+            -group:[
               -text: "Example: Schrödinger's Cat"
                 align: center
-        -group:
+            ]
+        -group:[
           -text:"Why is it important?"
           align: center
+        ]
+      ]

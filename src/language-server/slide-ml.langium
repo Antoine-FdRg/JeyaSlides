@@ -25,13 +25,21 @@ Template:
 
 TemplateDefaults:
   'defaults:'
-    (background=TemplateBackground)?
-    (textStyles=TemplateTextStyles)?
+    (
+      background=TemplateBackground
+    | textStyles=TemplateTextStyles
+    | transition=TemplateTransition
+    )*
+;
+
+TemplateTransition:
+  'transition:'
+    'type:' type=TransitionEffect
+    ('duration:' duration=DurationType)?
 ;
 
 TemplateBackground:
-  'background:'
-    'color:' color=ColorValue
+  'backgroundColor:' color=BackgroundValue
 ;
 
 TemplateTextStyles:
@@ -60,6 +68,7 @@ Presentation:
 
 Slide:
   '-slide:'
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
     (transition=Transition)?
     ('-'elements+=Element)+
 ;
@@ -68,11 +77,12 @@ Element:
   Text | Image | Video | Quiz | Group | Plot;
 
 Group:
-  'group:'
+  'group:' '['
     (style=Style)?
     (position=Position)?
     (animation=Animation)?
     ('-'elements+=Element)+
+  ']'
 ;
 
 Text:
@@ -85,10 +95,16 @@ Text:
 Code:
   'code:' 
   ('language:' language=STRING)?
-  ('animated:' animated=BOOLEAN)?
+  ('codeAnimation:' codeAnimation=CodeAnimation)?
   content=STRING
   ('explanations:'
     explanations+=CodeExplanation+)?;
+
+CodeAnimation:
+  ranges+=CodeHighlightRange ('|' ranges+=CodeHighlightRange)*;
+
+CodeHighlightRange:
+  start=NUMBER ('..' end=NUMBER)?;
 
 CodeExplanation:
   '-' line=NUMBER ":" content=STRING;
@@ -111,16 +127,14 @@ List:
 ;
 
 Image:
-  'image:'
-    'link:' link=STRING
+  'image:' link=STRING
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
 ;
 
 Video:
-  'video:'
-    'link:' link=STRING
+  'video:' link=STRING
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
@@ -161,7 +175,7 @@ Option:
 Style:
   'style:'
     (size=Size)?
-    ('backgroundColor:' backgroundColor=ColorValue)?
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
     (font=Font)?
     ('rotation:' rotation=NUMBER)?
 ;
@@ -174,12 +188,30 @@ SizeValue:
 
 Font:
   'font:'
-    ('name:' name=STRING)?
-    ('size:' size=NUMBER)?
-    ('color:' color=ColorValue)?
-    ('transformations:'
-      '-'transformations+=FontTransformation 
-      ('-' transformations+=FontTransformation)* )?
+  (
+    (
+      (name=STRING size=NUMBER?
+      | size=NUMBER name=STRING?)
+      ('color:' color=ColorValue)?
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      ('color:' color=ColorValue)
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      'transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      ('color:' color=ColorValue)?
+    )
+  )
 ;
 
 terminal FontTransformation: 'bold' | 'italic' | 'underline';
@@ -210,6 +242,21 @@ StringArray:
 PlotLayout:
   ('xLabel:' xLabel=STRING)?
   ('yLabel:' yLabel=STRING)?;
+
+Animation:
+  "animation:" 
+    (
+      (animationType=AnimationType order=NUMBER?) | 
+      (order=NUMBER animationType=AnimationType?)
+    )
+;
+
+terminal AnimationType: 
+  'fade-up' | 'fade-down' | 'fade-left' | 'fade-right' |
+  'fade-in-then-out' | 'current-visible' | 'fade-in-then-semi-out' |
+  'grow' | 'semi-fade-out' | 'shrink' | 'strike' |
+  'highlight-red' | 'highlight-green' | 'highlight-blue' |
+  'highlight-current-red' | 'highlight-current-green' | 'highlight-current-blue';
 
 Position:
   'position:'(ShorthandPosition | DetailedPosition);
@@ -243,21 +290,12 @@ EnumZPosition returns string:
   'front' | 'back';
 
 
-terminal EffectToken: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
-
-Animation:
-  "animation:"  
-    'order:' order=NUMBER?;
-
-ComplexAnimation:
-  'type:' animationType=EffectToken
-  ('duration:' duration=NUMBER)?;
-
-
 Transition:
   'transition:' 
-    'type:' type=EffectToken
+    'type:' type=TransitionEffect 
     ('duration:' duration=DurationType)?;
+
+terminal TransitionEffect: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
 
 TextAlignment returns string:
   'left' | 'center' | 'right' | 'justify';
@@ -269,6 +307,33 @@ DurationType returns string:
 
 ColorValue returns string:
     HexColor | STRING
+;
+
+BackgroundValue:
+    SolidColor | GradientColor
+;
+
+SolidColor:
+    color=ColorValue
+;
+
+GradientColor:
+  'gradient'
+    from=ColorValue
+    to=ColorValue
+    (modifier=GradientKeywordModifier | angle=GradientAngle)?
+;
+
+GradientKeywordModifier returns string:
+    GradientDirection | 'radial'
+;
+
+GradientDirection returns string:
+    'horizontal' | 'vertical' | 'diagonal'
+;
+
+GradientAngle:
+    angle=NUMBER 'deg'
 ;
 
 terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;

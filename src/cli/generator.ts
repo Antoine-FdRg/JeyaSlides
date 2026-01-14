@@ -31,10 +31,14 @@ import {
   isPlot,
   isShorthandPosition,
   CoordinatePosition,
+  SolidColor,
+  BackgroundValue,
+  GradientColor,
+  CodeAnimation,
 } from '../language-server/generated/ast';
 import { extractDestinationAndName } from './cli-util';
 import { parseTemplate } from './template-parser';
-import { extractTextDefaults, resolveTextStyles } from './template-utils';
+import { extractTemplateTransition, extractTextDefaults, resolveTextStyles } from './template-utils';
 import { TemplateContext } from './template-types';
 
 const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
@@ -63,7 +67,7 @@ export function generateRevealJsFile(model: Model, filePath: string, destination
 export function generateRevealJsString(model: Model, sourceDir: string): string {
   const fileNode = new CompositeGeneratorNode();
   // For preview, don't copy assets, just use paths as-is
-  generateRevealJs(model, fileNode, sourceDir, sourceDir);
+  generateRevealJs(model, fileNode, sourceDir, sourceDir, true);
   return toString(fileNode);
 }
 
@@ -71,7 +75,13 @@ let CURRENT_SOURCE_DIR = '.';
 let CURRENT_OUTPUT_DIR = '.';
 let PROJECT_ROOT = '.';
 
-function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, sourceDir: string, outputDir: string) {
+function generateRevealJs(
+  model: Model,
+  fileNode: CompositeGeneratorNode,
+  sourceDir: string,
+  outputDir: string,
+  isPreview: boolean = false,
+) {
   CURRENT_SOURCE_DIR = path.resolve(sourceDir);
   CURRENT_OUTPUT_DIR = path.resolve(outputDir);
   PROJECT_ROOT = path.resolve(__dirname, '..', '..');
@@ -94,7 +104,56 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
     
     <style>
-  body { font-family: Arial, sans-serif; }
+  body { 
+    font-family: Arial, sans-serif;
+    ${
+      isPreview
+        ? `
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    `
+        : ''
+    }
+  }
+
+  ${
+    isPreview
+      ? `
+  /* Preview container with 16/9 ratio */
+  .preview-container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    border: 5px solid #aaa;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* 16/9 aspect ratio wrapper */
+  .preview-aspect-ratio {
+    position: relative;
+    width: 100%;
+    padding-bottom: 50%; /* 16:10 ratio for 1920x960 */
+  }
+
+  .preview-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Let Reveal.js handle all the scaling based on 1920x960 reference */
+  .reveal {
+    /* Reveal.js will scale everything proportionally */
+  }
+  `
+      : ''
+  }
 
 /* centre uniquement la slide qui contient un quiz */
 .has-quiz{
@@ -161,6 +220,13 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   border-radius: 12px;
 }
 
+.highlight {
+  background: #ffeb3b;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  box-decoration-break: clone;
+}
+
 @media (max-width: 1100px){
   .quiz-side{ display:none; }
 }
@@ -170,6 +236,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     </style>
 </head>
 <body>
+    ${isPreview ? '<div class="preview-container"><div class="preview-aspect-ratio"><div class="preview-content">' : ''}
     <div class="reveal">
         <div class="slides">`);
 
@@ -183,6 +250,7 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
   fileNode.append(`
         </div>
     </div>
+    ${isPreview ? '</div></div></div>' : ''}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
     <script src="https://unpkg.com/tldreveal/dist/bundle/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"><\/script>
@@ -218,11 +286,25 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
           hash: true,
           center: true,
           transition: 'slide',
-          width: 2000, // large width to make tldreveal occupy the full space 
-          height: 1125, // large height to make tldreveal occupy the full space
+          ${
+            isPreview
+              ? `
+          // Preview mode: use 1920x960 as reference (16:10 ratio for better content fit)
+          width: 1920,
+          height: 960,
+          margin: 0.04,
+          minScale: 0.2,
+          maxScale: 1.5,
+          `
+              : `
+          // Export mode: larger canvas for tldreveal
+          width: 2000,
+          height: 1125,
           minScale: 0.2,
           maxScale: 2.0,
-          disableLayout: true,
+          `
+          }
+          disableLayout: ${isPreview ? 'false' : 'true'},
           slideNumber: ${presentation.displaySlideNumber ?? false},
           scrollActivationWidth: undefined,
           plugins: [Tldreveal.Tldreveal(), RevealHighlight],
@@ -346,6 +428,7 @@ function loadTemplate(presentation: Presentation): TemplateContext | undefined {
     bodyElements: templateModel.bodyTemplate?.elements,
     backgroundColor: templateModel.defaults?.background?.color,
     textDefaults: extractTextDefaults(templateModel),
+    transition: extractTemplateTransition(templateModel),
   };
 }
 
@@ -400,17 +483,22 @@ function generateSlide(
   const normalizedTransition = slide.transition
     ? {
         type: slide.transition.type,
-        duration: slide.transition.duration ? slide.transition.duration : 'default',
+        duration: slide.transition.duration ?? 'default',
       }
-    : undefined;
+    : template?.transition
+      ? {
+          type: template.transition.type,
+          duration: template.transition.duration ?? 'default',
+        }
+      : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
-  const bg = template?.backgroundColor;
+  const bg = slide.backgroundColor ?? template?.backgroundColor;
 
   const slideStyle = `
     width: 100%;
     height: 100%;
-    ${bg ? `background-color: ${bg};` : ''}
+    ${bg ? resolveBackground(bg) : ''}
   `;
   const hasQuiz = slide.elements.some((e) => isQuiz(e));
   fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
@@ -476,10 +564,7 @@ function getElementStyles(element: Element): string[] {
   const styles: string[] = [...DEFAULT_ELEMENT_STYLES];
   if (!element.style) return styles;
   if (element.style.backgroundColor) {
-    styles.push(`background-color: ${element.style.backgroundColor};`);
-  }
-  if (element.style.rotation) {
-    styles.push(`transform: rotate(${element.style.rotation}deg);`);
+    styles.push(resolveBackground(element.style.backgroundColor));
   }
   styles.push(...(getSizeStyles(element) || []));
   styles.push(...(getFontStyles(element) || []));
@@ -487,12 +572,24 @@ function getElementStyles(element: Element): string[] {
 
   function getSizeStyles(element: Element): string[] | undefined {
     let sizeStyles: string[] = [];
+    const isImageStyle = isImage(element);
+
     if (!element.style?.size) return;
-    if (element.style.size.width && element.style.size.width.value != 'auto') {
-      sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+
+    if (element.style.size.width && element.style.size.width.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-width: ${element.style.size.width.value}vw;`);
+      } else {
+        sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+      }
     }
-    if (element.style.size.height && element.style.size.height.value != 'auto') {
-      sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+
+    if (element.style.size.height && element.style.size.height.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-height: ${element.style.size.height.value}vh;`);
+      } else {
+        sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+      }
     }
     return sizeStyles;
   }
@@ -554,7 +651,7 @@ function getElementPosition(element: Element): string {
   getXPosition(X, positionStyles, transformStyles);
   getYPosition(Y, positionStyles, transformStyles);
   getZPosition(element.position.z, positionStyles);
-
+  getRotation(element,transformStyles);
   if (X || Y) {
     positionStyles.unshift('position: absolute;'); // position absolute si une position est définie pour positionner par rapport au conteneur parent
   }
@@ -563,6 +660,12 @@ function getElementPosition(element: Element): string {
     positionStyles.push(`transform: ${transformStyles.join(' ')};`);
   }
   return positionStyles.join(' ');
+
+  function getRotation(element: Element, transformStyles: string[]) {
+    if (element.style && element.style.rotation) {
+      transformStyles.push(`rotate(${element.style.rotation}deg)`);
+    }
+  }
 
   /**
    * Ajoute les styles de positionnement horizontal à la liste des styles et de transformation
@@ -577,7 +680,6 @@ function getElementPosition(element: Element): string {
       transformStyles.push('translateX(-50%)');
       return;
     }
-    console.log('[Position] Processing X position value:', x);
     switch (x) {
       case 'left':
         styles.push('left: 2%;');
@@ -614,7 +716,7 @@ function getElementPosition(element: Element): string {
         break;
       case 'bottom':
         styles.push('bottom: 2%;');
-        transformStyles.push('translateY(-100%)');
+        // transformStyles.push('translateY(-100%)');
         break;
     }
   }
@@ -659,13 +761,13 @@ function getElementAnimation(element: Element): AnimationData | undefined {
   if (!element.animation) return undefined;
   const animation = element.animation;
   const order = animation.order;
-  return { classes: `fragment`, attributes: `data-fragment-index="${order}"` };
+  const type = animation.animationType ? animation.animationType : '';
+  return { classes: `fragment ${type}`, attributes: `data-fragment-index="${order}"` };
 }
 
 //Quiz helpers
 function sanitizeStringLiteral(s: string | undefined): string {
   if (s == null) return '';
-  // Langium STRING => souvent avec guillemets, ex: "hello"
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
     return s.substring(1, s.length - 1);
   }
@@ -891,16 +993,19 @@ function generateList(
   fileNode: CompositeGeneratorNode,
   elementStyle: any,
   template?: TemplateContext,
-  styles: String[] = [],
+  styles: string[] = [],
 ) {
   const ordered = (listNode as any).ordered === true || (listNode as any).ordered === 'true';
+
   const tag = ordered ? 'ol' : 'ul';
   const resolvedTextStyles = resolveTextStyles('text', elementStyle, template);
   const listStyles = ['margin: 5vw;', 'padding-left: 1.2em;', ...styles, ...resolvedTextStyles];
   fileNode.append(`<${tag} style="${listStyles.join(' ')}">`);
   for (const item of listNode.items ?? []) {
     const raw = sanitizeStringLiteral(item);
-    const html = markdownToHtml(raw);
+    let html = markdownToHtml(raw);
+    html = applyInlineHighlight(html);
+
     fileNode.append(`<li>${html}</li>`);
   }
   fileNode.append(`</${tag}>`);
@@ -997,12 +1102,12 @@ function generateText(
 function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
   const lang = code.language ? code.language : 'plaintext';
   const hasExplanations = code.explanations && code.explanations.length > 0;
-  if (code.animated && hasExplanations) {
-    generateExplainedCode(code, lang, fileNode, true);
+  if (code.codeAnimation && hasExplanations) {
+    generateExplainedCode(code, lang, fileNode, code.codeAnimation);
     return;
   }
-  if (code.animated) {
-    generateCodeBlock(code.content, lang, fileNode, true);
+  if (code.codeAnimation) {
+    generateCodeBlock(code.content, lang, fileNode, code.codeAnimation);
     return;
   }
   if (hasExplanations) {
@@ -1011,16 +1116,21 @@ function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
   }
   generateCodeBlock(code.content, lang, fileNode);
 
-  function generateExplainedCode(code: Code, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+  function generateExplainedCode(
+    code: Code,
+    language: string,
+    fileNode: CompositeGeneratorNode,
+    codeAnimation?: CodeAnimation,
+  ) {
     fileNode.append(
       '<div class="group" style="display: flex; flex-direction: row; align-items: center; min-width: 800px; max-width: 80%;">',
     );
-    generateCodeBlock(code.content, language, fileNode, true);
+    generateCodeBlock(code.content, language, fileNode, codeAnimation);
     fileNode.append('<div class="code-explanations" style="margin: 20px 0; ">');
     for (const explanation of code.explanations) {
       let explainClass = '';
       let style = '';
-      if (animated) {
+      if (codeAnimation) {
         explainClass = `class="explain-${explanation.line}"`;
         style = 'opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out;';
       }
@@ -1032,12 +1142,16 @@ function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
     fileNode.append('</div>');
   }
 
-  function generateCodeBlock(content: string, language: string, fileNode: CompositeGeneratorNode, animated?: boolean) {
+  function generateCodeBlock(
+    content: string,
+    language: string,
+    fileNode: CompositeGeneratorNode,
+    animation?: CodeAnimation,
+  ) {
     let lineAnimation = '';
-    if (animated) {
-      lineAnimation = `data-line-numbers="${content
-        .split('\n')
-        .map((_, i) => i + 1)
+    if (animation) {
+      lineAnimation = `data-line-numbers="${animation.ranges
+        .map((r) => (!r.end || r.start === r.end ? r.start : `${r.start}-${r.end}`))
         .join('|')}"`;
     }
     fileNode.append(
@@ -1067,25 +1181,39 @@ function markdownToHtml(markdown: string): string {
   return html;
 }
 
+function applyInlineHighlight(html: string): string {
+  if (!html) return html;
+
+  return html.replace(/\[\!(.+?)\!\]/g, '<span class="highlight">$1</span>');
+}
+
 function generateParagraph(
   paragraph: Paragraph,
   fileNode: CompositeGeneratorNode,
   elementStyle: any,
-  template?: TemplateContext,
+  template: TemplateContext | undefined,
 ) {
   const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
+
   const alignStyle = paragraph.align ? `text-align: ${paragraph.align};` : '';
   const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
-  paragraph.content = markdownToHtml(paragraph.content);
+
+  let html = markdownToHtml(paragraph.content);
+  html = applyInlineHighlight(html);
+
   fileNode.append(
     `<${tag} style="${DEFAULT_TEXT_STYLE}${alignStyle}${resolvedStyles.join(' ')}">
-      ${paragraph.content}
+      ${html}
      </${tag}>`,
   );
 }
 
 function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: String[], animationData?: AnimationData) {
   const plotId = `plot_${PLOT_COUNTER++}`;
+
+  const plotStyles = styles.filter((s) => !s.includes('fit-content'));
+
+  const finalStyles = ['width: 80%;', 'height: 60%;', 'min-height: 300px;', 'visibility: hidden;', ...plotStyles];
 
   const animationClass = animationData?.classes ?? '';
   const animationAttributes = animationData?.attributes ?? '';
@@ -1094,8 +1222,8 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 
   fileNode.append(`<div ${classAttr} ${animationAttributes}`);
 
-  if (styles.length > 0) {
-    fileNode.append(` style="${styles.join(' ')}"`);
+  if (finalStyles.length > 0) {
+    fileNode.append(` style="${finalStyles.join(' ')}"`);
   }
 
   fileNode.append(`>`);
@@ -1117,27 +1245,81 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
     : 'Study hours: %{x}<br>Score: %{y}<extra></extra>';
 
   fileNode.append(`
-<script>
-(function () {
-  const trace = {
-    x: ${JSON.stringify(x)},
-    y: ${JSON.stringify(y)},
-    type: "${plotType}",
-    mode: "${plotType === 'scatter' ? 'markers' : 'lines'}",
-    ${hasLabels ? `text: ${JSON.stringify(labels)},` : ''}
-    hovertemplate: ${JSON.stringify(hoverTemplate)}
-  };
+  <script>
+  (function () {
+    const trace = {
+      x: ${JSON.stringify(x)},
+      y: ${JSON.stringify(y)},
+      type: "${plotType}",
+      mode: "${plotType === 'scatter' ? 'markers' : 'lines'}",
+      ${hasLabels ? `text: ${JSON.stringify(labels)},` : ''}
+      hovertemplate: ${JSON.stringify(hoverTemplate)}
+    };
 
-  const layout = {
-    margin: { t: 20 },
-    ${xLabel ? `xaxis: { title: ${JSON.stringify(xLabel)} },` : ''}
-    ${yLabel ? `yaxis: { title: ${JSON.stringify(yLabel)} },` : ''}
-  };
+    const layout = {
+      autosize: true,
+      margin: { t: 30, l: 40, r: 20, b: 40 },
+      ${xLabel ? `xaxis: { title: ${JSON.stringify(xLabel)} },` : ''}
+      ${yLabel ? `yaxis: { title: ${JSON.stringify(yLabel)} },` : ''}
+    };
 
-  Plotly.newPlot("${plotId}", [trace], layout, { responsive: true });
-})();
-</script>
-`);
+    function renderPlot_${plotId}() {
+      const el = document.getElementById("${plotId}");
+      if (!el) return;
+
+      const slide = el.closest("section");
+      if (!slide || !slide.classList.contains("present")) return;
+
+      Plotly.newPlot("${plotId}", [trace], layout, { responsive: true });
+      el.parentElement.style.visibility = "visible";
+    }
+
+    function bindReveal_${plotId}() {
+      if (!window.Reveal || !Reveal.isReady()) return false;
+
+      Reveal.on("ready", renderPlot_${plotId});
+      Reveal.on("slidechanged", renderPlot_${plotId});
+      renderPlot_${plotId}();
+
+      return true;
+    }
+
+    if (!bindReveal_${plotId}()) {
+      const i = setInterval(() => {
+        if (bindReveal_${plotId}()) clearInterval(i);
+      }, 50);
+    }
+  })();
+  </script>
+  `);
+}
+
+function resolveBackground(background: string | BackgroundValue): string {
+  if (typeof background === 'string') {
+    return `background-color: ${background};`;
+  }
+
+  if ((background as SolidColor).color !== undefined) {
+    return `background: ${(background as SolidColor).color};`;
+  }
+  const gradient = background as GradientColor;
+
+  const from = gradient.from;
+  const to = gradient.to;
+  let direction = 'to bottom';
+
+  if (gradient.modifier) {
+    if (gradient.modifier === 'horizontal') direction = 'to right';
+    else if (gradient.modifier === 'vertical') direction = 'to bottom';
+    else if (gradient.modifier === 'diagonal') direction = 'to bottom right';
+    else if (gradient.modifier === 'radial') {
+      return `background: radial-gradient(circle, ${from}, ${to});`;
+    } else if ((gradient.modifier as any).angle !== undefined) {
+      return `background: linear-gradient(${(gradient.modifier as any).angle}deg, ${from}, ${to});`;
+    }
+  }
+
+  return `background: linear-gradient(${direction}, ${from}, ${to});`;
 }
 
 function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) {

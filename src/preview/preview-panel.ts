@@ -18,6 +18,7 @@ export class PreviewPanel {
   private _disposables: vscode.Disposable[] = [];
   private _currentDocument: vscode.TextDocument | undefined;
   private _lastSlidePosition: SlidePosition = { h: 0, v: 0, f: 0 };
+  private _isUpdating: boolean = false;
 
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
     this._panel = panel;
@@ -42,16 +43,10 @@ export class PreviewPanel {
     // Listen for when the panel is disposed
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
-    // Update the content based on view changes
-    this._panel.onDidChangeViewState(
-      () => {
-        if (this._panel.visible) {
-          this._updateWebview();
-        }
-      },
-      null,
-      this._disposables,
-    );
+    // Note: We don't refresh on view state change because:
+    // 1. retainContextWhenHidden keeps the state
+    // 2. Refreshing would reset the slide position
+    // The webview state (vscode.getState/setState) persists across visibility changes
   }
 
   public static createOrShow(extensionUri: vscode.Uri, document?: vscode.TextDocument) {
@@ -80,15 +75,36 @@ export class PreviewPanel {
   }
 
   public updateContent(document: vscode.TextDocument) {
+    // Always update - debouncing is handled in extension.ts
     this._currentDocument = document;
     this._updateWebview();
   }
 
+  public updateContentIfDifferent(document: vscode.TextDocument) {
+    // Only update if it's a different document (ignore same doc to avoid reset on click)
+    if (!this._currentDocument || this._currentDocument.uri.toString() !== document.uri.toString()) {
+      this._currentDocument = document;
+      this._updateWebview();
+    }
+    // If same document, don't do anything
+  }
+
+  public isPreviewingDocument(document: vscode.TextDocument): boolean {
+    return !!this._currentDocument && this._currentDocument.uri.toString() === document.uri.toString();
+  }
+
   private async _updateWebview() {
+    // Prevent concurrent updates
+    if (this._isUpdating) {
+      return;
+    }
+    this._isUpdating = true;
+
     const webview = this._panel.webview;
 
     if (!this._currentDocument) {
       webview.html = this._getLoadingHtml();
+      this._isUpdating = false;
       return;
     }
 
@@ -120,6 +136,8 @@ export class PreviewPanel {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       webview.html = this._getErrorHtml(errorMessage);
+    } finally {
+      this._isUpdating = false;
     }
   }
 
@@ -266,54 +284,59 @@ export class PreviewPanel {
   }
 
   private _injectSlidePositionScript(html: string): string {
-    // Inject script to save and restore slide position
+    // Inject script to save and restore slide position using webview state
     const positionScript = `
     <script>
-      const vscode = acquireVsCodeApi();
-      const savedPosition = ${JSON.stringify(this._lastSlidePosition)};
-      
-      Reveal.on('ready', () => {
-        // Restore the last slide position without transition
-        if (savedPosition && (savedPosition.h !== 0 || savedPosition.v !== 0)) {
-          // Temporarily disable transitions for the restore
-          const currentTransition = Reveal.getConfig().transition;
-          Reveal.configure({ transition: 'none' });
+      (function() {
+        const vscode = acquireVsCodeApi();
+        
+        // Get previous state or use saved position
+        const previousState = vscode.getState();
+        const savedPosition = previousState || ${JSON.stringify(this._lastSlidePosition)};
+        
+        Reveal.on('ready', () => {
+          // Restore the last slide position without transition
+          if (savedPosition && savedPosition.h !== undefined) {
+            const h = savedPosition.h || 0;
+            const v = savedPosition.v || 0;
+            const f = savedPosition.f || 0;
+            
+            // Disable transitions temporarily
+            const currentTransition = Reveal.getConfig().transition;
+            Reveal.configure({ transition: 'none' });
+            
+            // Jump to the saved position
+            setTimeout(() => {
+              Reveal.slide(h, v, f);
+              
+              // Re-enable transitions
+              setTimeout(() => {
+                Reveal.configure({ transition: currentTransition });
+              }, 100);
+            }, 50);
+          }
+        });
+        
+        // Save position to both vscode state and send message
+        function savePosition() {
+          const indices = Reveal.getIndices();
+          const position = { h: indices.h, v: indices.v, f: indices.f };
           
-          // Restore position
-          Reveal.slide(savedPosition.h, savedPosition.v, savedPosition.f);
+          // Persist in webview state (survives HTML reload)
+          vscode.setState(position);
           
-          // Re-enable transitions after a short delay
-          setTimeout(() => {
-            Reveal.configure({ transition: currentTransition });
-          }, 50);
+          // Also send to extension
+          vscode.postMessage({
+            type: 'slideChanged',
+            position: position
+          });
         }
-      });
-      
-      // Save position whenever the slide changes
-      Reveal.on('slidechanged', (event) => {
-        const indices = Reveal.getIndices();
-        vscode.postMessage({
-          type: 'slideChanged',
-          position: { h: indices.h, v: indices.v, f: indices.f }
-        });
-      });
-      
-      // Also save on fragment changes
-      Reveal.on('fragmentshown', () => {
-        const indices = Reveal.getIndices();
-        vscode.postMessage({
-          type: 'slideChanged',
-          position: { h: indices.h, v: indices.v, f: indices.f }
-        });
-      });
-      
-      Reveal.on('fragmenthidden', () => {
-        const indices = Reveal.getIndices();
-        vscode.postMessage({
-          type: 'slideChanged',
-          position: { h: indices.h, v: indices.v, f: indices.f }
-        });
-      });
+        
+        // Save on slide change
+        Reveal.on('slidechanged', savePosition);
+        Reveal.on('fragmentshown', savePosition);
+        Reveal.on('fragmenthidden', savePosition);
+      })();
     <\/script>`;
 
     // Insert the script before the closing </body> tag

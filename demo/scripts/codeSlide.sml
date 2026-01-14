@@ -16,12 +16,12 @@ presentation:
               if n == 0:
                   return 1
               else:
-                  return n * factorial(n - 1)
+                  return n * factorial(n - 1) 
         "
     -slide:
-      -title:   "Line animated Code"
+      -title:   "Animated Code"
       -code:
-        animated: true  
+        codeAnimation: 1|2..4
         " 
           sum = 0
           for i in range(10):
