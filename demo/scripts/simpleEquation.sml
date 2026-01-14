@@ -3,8 +3,13 @@ presentation:
     -slide:
         -title: "Simple Equation Demo"
           align: center
+        
+        -subtitle: "Einstein energy formula"
+         align: center
+         style:
+            font:
+              size: 24
 
-    -slide:
-        -equation:
-            display: true
-            content: "E = mc^2"
+        -equation: "E = mc^2"
+          align: center
+        

@@ -84,12 +84,13 @@ function generateRevealJs(model: Model, fileNode: CompositeGeneratorNode, source
     <title>Presentation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"><\/script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"><\/script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
     
     <style>
