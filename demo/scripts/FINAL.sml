@@ -427,16 +427,15 @@ presentation:
         animation: 1
       - code:
         language: "javascript"
-        animated: true 
+        codeAnimation: 1..2|3
           "
-          const x = 1;
+          const x = 1; 
           const y = 2;
           const z = x + y;
           "
         explanations:
-          - 2: "Declares a constant x with value 1"
-          - 3: "Declares a constant y with value 2"
-          - 4: "Declares a constant z as the sum of x and y"
+          - 1: "Declares a constant x with value 1 anda constant y with value 2"
+          - 3: "Declares a constant z as the sum of x and y"
         position:
           x:70
           y:70
@@ -447,10 +446,16 @@ presentation:
         type: fade
         duration: default
       -title: "Quizz en ligne"
+          position:
+            x: center
+            y: 10
         -quiz:
             link: "https://www.mentimeter.com/app/presentation/alptvry8m1s74bf64oi2i4vkpej9wf6n/embed"
             joinCode: "3174 5999"
             joinUrl: "https://www.menti.com"
+            position: 
+              x: 50
+              y: 60
     -slide:
       -title: "Utilisation de graphique"
       -text: "Cliquer pour faire apparaître les différents graphiques (bar, chart, scatter)."

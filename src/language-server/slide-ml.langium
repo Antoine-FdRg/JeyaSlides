@@ -97,7 +97,7 @@ Code:
   ('language:' language=STRING)?
   ('codeAnimation:' codeAnimation=CodeAnimation)?
   content=STRING
-  ('explanations:'
+  ('explanations:' 
     explanations+=CodeExplanation+)?;
 
 CodeAnimation:
@@ -147,10 +147,9 @@ Video:
 
 Quiz:
   'quiz:'
-    ('link:' link=STRING
+    'link:' link=STRING
     ('joinCode:' joinCode=STRING)?
-    ('joinUrl:' joinUrl=STRING)? |
-     personnalisedQuiz=PersonnalisedQuiz)
+    ('joinUrl:' joinUrl=STRING)?
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
@@ -173,8 +172,8 @@ Question:
 ;
 
 Option:
-  '-option:'
-      answer=STRING
+  '-option:' 
+      answer=STRING 
       "correct:" correct=BOOLEAN;
 
 Style:
@@ -311,15 +310,15 @@ DurationType returns string:
   'fast' | 'default' | 'slow';
 
 ColorValue returns string:
-    HexColor | STRING
+  HexColor | STRING
 ;
 
 BackgroundValue:
-    SolidColor | GradientColor
+  SolidColor | GradientColor
 ;
 
 SolidColor:
-    color=ColorValue
+  color=ColorValue
 ;
 
 GradientColor:
@@ -330,15 +329,15 @@ GradientColor:
 ;
 
 GradientKeywordModifier returns string:
-    GradientDirection | 'radial'
+  GradientDirection | 'radial'
 ;
 
 GradientDirection returns string:
-    'horizontal' | 'vertical' | 'diagonal'
+  'horizontal' | 'vertical' | 'diagonal'
 ;
 
 GradientAngle:
-    angle=NUMBER 'deg'
+  angle=NUMBER 'deg'
 ;
 
 terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
