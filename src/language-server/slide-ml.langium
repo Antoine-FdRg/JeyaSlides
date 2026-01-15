@@ -94,7 +94,12 @@ CodeExplanation:
   '-' line=NUMBER ":" content=STRING;
 
 Equation:
-  'equation:' content=STRING
+  'equation:'
+  (
+    content=STRING |
+    '-' lines+=STRING ('-' lines+=STRING)*
+  )
+  ('animated:' animated=BOOLEAN)?
   ('align:' align=TextAlignment)?;
 
 BasicText:

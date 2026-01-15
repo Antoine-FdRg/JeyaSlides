@@ -178,3 +178,39 @@ presentation:
                 font:
                     size: 26
                     color: #c0c0c0
+
+        -slide:
+            -title: "Multi-line Equations"
+             align: center
+
+            -subtitle: "Laws of Motion"
+             align: center
+             style:
+                font:
+                    size: 22
+                    color: #808080
+
+            -equation:
+                - "W &= \int F \, dx"
+                - "W &= \int ma \, dx = m \int \frac{dv}{dt} dx"
+                - "W &= m \int_{a}^{b} v \, dv = \frac{1}{2}mv^2"
+             align: center
+
+        -slide:
+            -title: "Multi-line Equation Animated"
+             align: center
+
+            -subtitle: "Derivative Calculation"
+             align: center
+             style:
+                font:
+                    size: 22
+                    color: #808080
+
+            -equation:
+                - "f(x) = \sin(x^2)"
+                - "f'(x) = \cos(x^2) \cdot \frac{d}{dx}{x^2}"
+                - "f'(x) = \cos(x^2) \cdot 2x"
+                - "f'(x) = 2x\cos(x^2)"
+             animated: true
+             align: center

@@ -1141,16 +1141,59 @@ function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: Stri
 }
 
 function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) {
-  // Remove surrounding quotes from content if present
-  let content = equation.content;
-  if (content.startsWith('"') && content.endsWith('"')) {
-    content = content.substring(1, content.length - 1);
-  }
-
   // Handle text alignment (default is center)
   const alignStyle = equation.align ? `text-align: ${equation.align};` : 'text-align: center;';
 
-  // Always use display mode (block equation, centered, larger)
+  // Helper to clean quotes from content
+  const cleanQuotes = (str: string) => {
+    if (str.startsWith('"') && str.endsWith('"')) {
+      return str.substring(1, str.length - 1);
+    }
+    return str;
+  };
+
+  // Check if animated multi-line equation
+  if (equation.animated && equation.lines && equation.lines.length > 0) {
+    // Simple approach: each line is a separate div, revealed one by one
+    // Remove & alignment operators since they don't work with individual equations
+    const cleanedLines = equation.lines.map(line => {
+      let cleaned = cleanQuotes(line);
+      // Remove & alignment operators (not supported in animated mode)
+      cleaned = cleaned.replace(/&/g, '');
+      return cleaned;
+    });
+
+    // First line visible by default, others appear as fragments
+    fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+    cleanedLines.forEach((line, index) => {
+      if (index === 0) {
+        // First line visible by default
+        fileNode.append(`<div>\\[${line}\\]</div>`);
+      } else {
+        // Other lines appear progressively as fragments
+        fileNode.append(`<div class="fragment">\\[${line}\\]</div>`);
+      }
+    });
+
+    fileNode.append('</div>');
+    return;
+  }
+
+  let latexContent: string;
+
+  if (equation.content) {
+    // Single equation: equation: "E = mc^2"
+    latexContent = cleanQuotes(equation.content);
+  } else if (equation.lines && equation.lines.length > 0) {
+    // Multi-line equations: equation: - "line1" - "line2"
+    const cleanedLines = equation.lines.map(cleanQuotes);
+    // Use aligned environment for multi-line equations
+    latexContent = `\\begin{aligned} ${cleanedLines.join(' \\\\ ')} \\end{aligned}`;
+  } else {
+    latexContent = '';
+  }
+
   // Block equation using \[...\] delimiters (MathJax display mode)
-  fileNode.append(`<div class="equation-display" style="${alignStyle}">\\[${content}\\]</div>`);
+  fileNode.append(`<div class="equation-display" style="${alignStyle}">\\[${latexContent}\\]</div>`);
 }
