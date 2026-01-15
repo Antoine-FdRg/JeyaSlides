@@ -53,8 +53,7 @@ presentation:
       -text: "Text fade à default"
         style:
           backgroundColor: #a0a005
-          font:
-            name: "Times New Roman"
+          font: "Times New Roman"
         
 
     -slide:
@@ -64,9 +63,7 @@ presentation:
       -text: "Test fade-out à fast"
         style:
           backgroundColor: #5a05a0
-          font:
-            name: "Courier New"
-            size: 64
+          font: "Courier New" 20
             color: #ff00ff
             transformations:
               - bold

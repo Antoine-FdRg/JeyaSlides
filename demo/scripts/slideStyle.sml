@@ -8,6 +8,7 @@ presentation:
       -text:   "Rotated block"
           style:
             rotation: 45
+          position: center
     -slide:
       -text:   "Rotated colored wide block"
           style:
@@ -27,7 +28,7 @@ presentation:
           size: 80 auto
           backgroundColor: #aaa
     -slide:
-      -group:
+      -group:[
         style:
           size: 100 auto
         backgroundColor: #ccc
@@ -43,17 +44,16 @@ presentation:
             style:
               size: 70 auto
               backgroundColor: #888
+      ]
     -slide:
       -text:   "Text with custom font"
         style:
           backgroundColor: #a0a005
-          font:
-            name: "Times New Roman"
+          font: "Times New Roman"
       -text:   "Text with custom font size"
         style:
           backgroundColor: #a0a005
-          font:
-            size: 30
+          font: 30
       -text:   "Text with custom font color"
         style:
           backgroundColor: #a0a005
@@ -72,9 +72,7 @@ presentation:
       -text:   "Text with all customizations"
         style:
           backgroundColor: #5a05a0
-          font:
-            name: "Courier New"
-            size: 64
+          font: "Courier New" 64
             color: #ff00ff
             transformations:
               - bold

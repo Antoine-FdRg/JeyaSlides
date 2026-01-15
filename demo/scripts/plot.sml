@@ -5,13 +5,11 @@ presentation:
     -slide:
       -title: "Study time vs test results"
             style:
-              font:
-                size: 30
+              font: 30
 
         -text: "Each point represents a student."
             style:
-              font:
-                size: 28
+              font: 28
 
         -plot:
             type: scatter
@@ -26,5 +24,4 @@ presentation:
             position:
               x: center
               y: center
-            animation:
-              order: 1
+            animation: 1

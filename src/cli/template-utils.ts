@@ -55,3 +55,15 @@ export function resolveTextStyles(
 
   return styles;
 }
+
+export function extractTemplateTransition(
+  template: Template
+): TemplateContext['transition'] {
+  const transition = template.defaults?.transition;
+  if (!transition) return undefined;
+
+  return {
+    type: transition.type,
+    duration: transition.duration,
+  };
+}

@@ -15,18 +15,20 @@ presentation:
         align: center
 
     -slide:
-      -group:
+      -group:[
         -text:"What is Superposition?"
           align: center
         -text:"A quantum system can exist in multiple states at once."
           align: center
           style:
-            font:
-              name: "Playfair Display"
+            font: "Playfair Display"
               color: #c2ce13
-        -group:
+        -group:[
           -text:"Example: Schrödinger's Cat"
               align: center
-      -group:
+        ]
+      ]
+      -group:[
             -text:"Why is it important?"
             align: center
+      ]
