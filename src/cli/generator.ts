@@ -590,11 +590,11 @@ function generateSlide(
         duration: slide.transition.duration ?? 'default',
       }
     : template?.transition
-    ? {
-        type: template.transition.type,
-        duration: template.transition.duration ?? 'default',
-      }
-    : undefined;
+      ? {
+          type: template.transition.type,
+          duration: template.transition.duration ?? 'default',
+        }
+      : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
   const bg = slide.backgroundColor ?? template?.backgroundColor;
@@ -737,15 +737,15 @@ function getElementPosition(element: Element): string {
     ? isCoordinatePosition(element.position.x)
       ? element.position.x
       : (element.position.x as any).$cstNode
-      ? (element.position.x as any).$cstNode.text?.trim()
-      : undefined
+        ? (element.position.x as any).$cstNode.text?.trim()
+        : undefined
     : undefined;
   let Y: string | CoordinatePosition = element.position.y
     ? isCoordinatePosition(element.position.y)
       ? element.position.y
       : (element.position.y as any).$cstNode
-      ? (element.position.y as any).$cstNode.text?.trim()
-      : undefined
+        ? (element.position.y as any).$cstNode.text?.trim()
+        : undefined
     : undefined;
   if (isShorthandPosition(element.position) && element.position.general === 'center') {
     X = 'center';
@@ -1393,48 +1393,91 @@ function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) 
     return str;
   };
 
-  // Check if animated multi-line equation
-  if (equation.animated && equation.lines && equation.lines.length > 0) {
-    // Simple approach: each line is a separate div, revealed one by one
-    // Remove & alignment operators since they don't work with individual equations
-    const cleanedLines = equation.lines.map(line => {
-      let cleaned = cleanQuotes(line);
-      // Remove & alignment operators (not supported in animated mode)
-      cleaned = cleaned.replace(/&/g, '');
-      return cleaned;
-    });
+  // Check if animation is enabled
+  if (equation.equationAnimation) {
+    const hasSteps = equation.equationAnimation.steps && equation.equationAnimation.steps.length > 0;
+    const hasSplit =
+      equation.equationAnimation.separator !== undefined && equation.equationAnimation.separator !== null;
 
-    // First line visible by default, others appear as fragments
-    fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+    if (hasSteps) {
+      // Animation with custom steps: each step is a separate fragment
+      const cleanedSteps = equation.equationAnimation.steps.map(cleanQuotes);
 
-    cleanedLines.forEach((line, index) => {
-      if (index === 0) {
-        // First line visible by default
-        fileNode.append(`<div>\\[${line}\\]</div>`);
-      } else {
-        // Other lines appear progressively as fragments
-        fileNode.append(`<div class="fragment">\\[${line}\\]</div>`);
-      }
-    });
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
 
-    fileNode.append('</div>');
-    return;
+      cleanedSteps.forEach((step, index) => {
+        if (index === 0) {
+          // First step visible by default
+          fileNode.append(String.raw`<div>\[${step}\]</div>`);
+        } else {
+          // Other steps appear progressively as fragments
+          fileNode.append(String.raw`<div class="fragment">\[${step}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+    if (hasSplit && equation.content && equation.equationAnimation.separator) {
+      // Split animation: build equation progressively with each part as complete LaTeX (display mode)
+      const separator = cleanQuotes(equation.equationAnimation.separator);
+      const fullEquation = cleanQuotes(equation.content);
+      const parts = fullEquation.split(separator);
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      // Build accumulated equation for each step
+      let accumulated = '';
+      parts.forEach((part, index) => {
+        accumulated += part;
+        if (index === 0) {
+          // First equation visible by default
+          fileNode.append(String.raw`<div>\[${accumulated}\]</div>`);
+        } else {
+          // Other equations appear progressively as fragments
+          fileNode.append(String.raw`<div class="fragment">\[${accumulated}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+    if (equation.lines && equation.lines.length > 0) {
+      const cleanedLines = equation.lines.map((line) => {
+        let cleaned = cleanQuotes(line);
+        // Remove & alignment operators (not supported in animated mode)
+        cleaned = cleaned.replaceAll('&', '');
+        return cleaned;
+      });
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      cleanedLines.forEach((line, index) => {
+        if (index === 0) {
+          fileNode.append(String.raw`<div>\[${line}\]</div>`);
+        } else {
+          fileNode.append(String.raw`<div class="fragment">\[${line}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
   }
 
+  // Non-animated equation
   let latexContent: string;
 
   if (equation.content) {
-    // Single equation: equation: "E = mc^2"
     latexContent = cleanQuotes(equation.content);
   } else if (equation.lines && equation.lines.length > 0) {
-    // Multi-line equations: equation: - "line1" - "line2"
     const cleanedLines = equation.lines.map(cleanQuotes);
-    // Use aligned environment for multi-line equations
-    latexContent = `\\begin{aligned} ${cleanedLines.join(' \\\\ ')} \\end{aligned}`;
+    const separator = String.raw` \\ `;
+    latexContent = String.raw`\begin{aligned} ${cleanedLines.join(separator)} \end{aligned}`;
   } else {
     latexContent = '';
   }
 
   // Block equation using \[...\] delimiters (MathJax display mode)
-  fileNode.append(`<div class="equation-display" style="${alignStyle}">\\[${latexContent}\\]</div>`);
+  fileNode.append(String.raw`<div class="equation-display" style="${alignStyle}">\[${latexContent}\]</div>`);
 }

@@ -115,8 +115,16 @@ Equation:
     content=STRING |
     '-' lines+=STRING ('-' lines+=STRING)*
   )
-  ('animated:' animated=BOOLEAN)?
+  ('equationAnimation:' equationAnimation=EquationAnimation)?
   ('align:' align=TextAlignment)?;
+
+EquationAnimation:
+  (
+    'enabled' |
+    'steps:' '-' steps+=STRING ('-' steps+=STRING)* |
+    'split:' separator=STRING
+  )
+;
 
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
@@ -155,26 +163,6 @@ Quiz:
   (animation=Animation)?
 ;
 
-PersonnalisedQuiz:
-  '-info:'
-      'name:' title=STRING
-      'description:' description=STRING
-  '-questions:'
-      (question+=Question)+
-;
-
-Question:
-  '-question:' content=STRING
-      'options:'
-          (option+=Option)+
-      ('correctMessage:' correctMessage=STRING)?
-      ('incorrectMessage:' incorrectMessage=STRING)?
-;
-
-Option:
-  '-option:' 
-      answer=STRING 
-      "correct:" correct=BOOLEAN;
 
 Style:
   'style:'

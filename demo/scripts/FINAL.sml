@@ -526,11 +526,73 @@ presentation:
         duration: slow
         -title: "Visualisation d'équations"
           style:
-            font: 28 
-        -text: "TODO: mettre un exemple de visualisation d'équations"
+            font: 28
+        -text: "On peut afficher une équation entière :"
+          position:
+            x: 45
+            y: 15
+        -equation: "E_k | = \frac{1}{2}mv^2"
           style:
-            backgroundColor: #e0f23d
-            font: 16
+            font: 20
+          position:
+            x: 65 
+            y: 15
+          
+        -group: [
+              style: 
+                size: 80 55
+              position:
+                  x: 50
+                  y: 53
+              animation: 2
+              -text: "De manière animée, calcul d'une dérivée: "
+              -equation:
+                  - "f(x) = \sin(x^2)"
+                  - "f'(x) = \cos(x^2) \cdot \frac{d}{dx}{x^2}"
+                  - "f'(x) = \cos(x^2) \cdot 2x"
+                  - "f'(x) = 2x\cos(x^2)"
+              equationAnimation: enabled
+              style:
+                font: 20
+              position:
+                x: center
+                y: center
+            ]
+      -slide:
+        transition:
+          type: zoom-in
+          duration: slow
+        -title: "Visualisation d'équations"
+          style:
+            font: 28
+        -text: "On peut afficher une équation entière :"
+          position:
+            x: 45
+            y: 15
+        -equation: "E_k | = \frac{1}{2}mv^2"
+          style:
+            font: 20
+          position:
+            x: 65 
+            y: 15
+
+          -group: [
+              style: 
+                size: 80 55
+              position:
+                  x: 50
+                  y: 53
+              animation: 2
+              - text: " De manière à garder du suspens sur le résultat :"
+              -equation: "2x+5=15 | \Leftrightarrow 2x =10 | \Leftrightarrow x =5"
+                equationAnimation:
+                  split: " | "
+                style:
+                  font: 20
+              position:
+                x: center
+                y: center
+            ]
       -slide:
       transition:
         type: concave

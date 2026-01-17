@@ -19,7 +19,9 @@ presentation:
              align: center
             
             // Main equation - display mode (block)
-            -equation: "E_k = \frac{1}{2}mv^2"
+            -equation: "E_k | = \frac{1}{2}mv^2"
+            equationAnimation:
+                split: " | "
              style:
                 backgroundColor: #eeeef5
                 font: 32
@@ -148,6 +150,8 @@ presentation:
                 - "W &= \int F \, dx"
                 - "W &= \int ma \, dx = m \int \frac{dv}{dt} dx"
                 - "W &= m \int_{a}^{b} v \, dv = \frac{1}{2}mv^2"
+                equationAnimation: enabled
+
              align: center
 
         -slide:
@@ -165,5 +169,38 @@ presentation:
                 - "f'(x) = \cos(x^2) \cdot \frac{d}{dx}{x^2}"
                 - "f'(x) = \cos(x^2) \cdot 2x"
                 - "f'(x) = 2x\cos(x^2)"
-             animated: true
+             equationAnimation: enabled
              align: center
+
+        -slide:
+            -title: "Equation Animation with Split"
+             align: center
+
+            -subtitle: "Build equation progressively on same line"
+             align: center
+             style:
+                font: 22
+                color: #808080
+
+            -equation: "2x + 5 | = 15"
+             equationAnimation:
+                split: " |"
+             style:
+                font: 28
+                color: #f63f3f
+
+        -slide:
+            -title: "Equation Resolution"
+             align: center
+
+            -subtitle: "Solve step by step"
+             align: center
+             style:
+                font: 20 
+                color: #808080
+
+            -equation: "2x+5=15 | \Rightarrow 2x =10 | \Rightarrow x =5"
+             equationAnimation:
+                split: " | "
+             style:
+                font: 26
