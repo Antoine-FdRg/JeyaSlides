@@ -86,7 +86,7 @@ Group:
 ;
 
 Text:
-  (Code | BasicText)
+  (Code | Equation | BasicText)
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
@@ -109,6 +109,23 @@ CodeHighlightRange:
 CodeExplanation:
   '-' line=NUMBER ":" content=STRING;
 
+Equation:
+  'equation:'
+  (
+    content=STRING |
+    '-' lines+=STRING ('-' lines+=STRING)*
+  )
+  ('equationAnimation:' equationAnimation=EquationAnimation)?
+  ('align:' align=TextAlignment)?;
+
+EquationAnimation:
+  (
+    'enabled' |
+    'steps:' '-' steps+=STRING ('-' steps+=STRING)* |
+    'split:' separator=STRING
+  )
+;
+
 BasicText:
   (Paragraph | List) ('align:' align=TextAlignment)?;
 
@@ -118,7 +135,7 @@ Paragraph:
 List:
   'list:'   
     ('ordered:' ordered=BOOLEAN)? 
-    '-'items+=STRING 
+    '-'items+=STRING
     ('-' items+=STRING)*
 ;
 
@@ -138,34 +155,14 @@ Video:
 
 Quiz:
   'quiz:'
-    'link:' link=STRING 
-    ('joinCode:' joinCode=STRING)? 
+    'link:' link=STRING
+    ('joinCode:' joinCode=STRING)?
     ('joinUrl:' joinUrl=STRING)?
   (style=Style)?
   (position=Position)?
   (animation=Animation)?
 ;
 
-PersonnalisedQuiz:
-  '-info:'
-      'name:' title=STRING
-      'description:' description=STRING
-  '-questions:'
-      (question+=Question)+
-;
-
-Question:
-  '-question:' content=STRING
-      'options:'
-          (option+=Option)+
-      ('correctMessage:' correctMessage=STRING)?
-      ('incorrectMessage:' incorrectMessage=STRING)?
-;
-
-Option:
-  '-option:' 
-      answer=STRING 
-      "correct:" correct=BOOLEAN;
 
 Style:
   'style:'

@@ -11,6 +11,8 @@ import {
   Text,
   isText,
   isCode,
+  Equation,
+  isEquation,
   Paragraph,
   isParagraph,
   isList,
@@ -92,10 +94,15 @@ function generateRevealJs(
     <title>Presentation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"><\/script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+    
     <style>
   body { 
     font-family: Arial, sans-serif;
@@ -209,6 +216,14 @@ function generateRevealJs(
   .menti-qr {
     display: none;
   }
+}
+
+.equation-display {
+    margin: 20px 0;
+    text-align: center;
+}
+.equation-inline {
+    display: inline;
 }
 
 /* =========================
@@ -575,11 +590,11 @@ function generateSlide(
         duration: slide.transition.duration ?? 'default',
       }
     : template?.transition
-    ? {
-        type: template.transition.type,
-        duration: template.transition.duration ?? 'default',
-      }
-    : undefined;
+      ? {
+          type: template.transition.type,
+          duration: template.transition.duration ?? 'default',
+        }
+      : undefined;
   const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
 
   const bg = slide.backgroundColor ?? template?.backgroundColor;
@@ -722,15 +737,15 @@ function getElementPosition(element: Element): string {
     ? isCoordinatePosition(element.position.x)
       ? element.position.x
       : (element.position.x as any).$cstNode
-      ? (element.position.x as any).$cstNode.text?.trim()
-      : undefined
+        ? (element.position.x as any).$cstNode.text?.trim()
+        : undefined
     : undefined;
   let Y: string | CoordinatePosition = element.position.y
     ? isCoordinatePosition(element.position.y)
       ? element.position.y
       : (element.position.y as any).$cstNode
-      ? (element.position.y as any).$cstNode.text?.trim()
-      : undefined
+        ? (element.position.y as any).$cstNode.text?.trim()
+        : undefined
     : undefined;
   if (isShorthandPosition(element.position) && element.position.general === 'center') {
     X = 'center';
@@ -1130,6 +1145,8 @@ function generateText(
 
   if (isCode(text)) {
     generateCode(text, fileNode);
+  } else if (isEquation(text)) {
+    generateEquation(text, fileNode);
   } else if (isParagraph(text)) {
     generateParagraph(text, fileNode, text.style, template);
   } else if (isList(text)) {
@@ -1362,4 +1379,105 @@ function resolveBackground(background: string | BackgroundValue): string {
   }
 
   return `background: linear-gradient(${direction}, ${from}, ${to});`;
+}
+
+function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) {
+  // Handle text alignment (default is center)
+  const alignStyle = equation.align ? `text-align: ${equation.align};` : 'text-align: center;';
+
+  // Helper to clean quotes from content
+  const cleanQuotes = (str: string) => {
+    if (str.startsWith('"') && str.endsWith('"')) {
+      return str.substring(1, str.length - 1);
+    }
+    return str;
+  };
+
+  // Check if animation is enabled
+  if (equation.equationAnimation) {
+    const hasSteps = equation.equationAnimation.steps && equation.equationAnimation.steps.length > 0;
+    const hasSplit =
+      equation.equationAnimation.separator !== undefined && equation.equationAnimation.separator !== null;
+
+    if (hasSteps) {
+      // Animation with custom steps: each step is a separate fragment
+      const cleanedSteps = equation.equationAnimation.steps.map(cleanQuotes);
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      cleanedSteps.forEach((step, index) => {
+        if (index === 0) {
+          // First step visible by default
+          fileNode.append(String.raw`<div>\[${step}\]</div>`);
+        } else {
+          // Other steps appear progressively as fragments
+          fileNode.append(String.raw`<div class="fragment">\[${step}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+    if (hasSplit && equation.content && equation.equationAnimation.separator) {
+      // Split animation: build equation progressively with each part as complete LaTeX (display mode)
+      const separator = cleanQuotes(equation.equationAnimation.separator);
+      const fullEquation = cleanQuotes(equation.content);
+      const parts = fullEquation.split(separator);
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      // Build accumulated equation for each step
+      let accumulated = '';
+      parts.forEach((part, index) => {
+        accumulated += part;
+        if (index === 0) {
+          // First equation visible by default
+          fileNode.append(String.raw`<div>\[${accumulated}\]</div>`);
+        } else {
+          // Other equations appear progressively as fragments
+          fileNode.append(String.raw`<div class="fragment">\[${accumulated}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+    if (equation.lines && equation.lines.length > 0) {
+      const cleanedLines = equation.lines.map((line) => {
+        let cleaned = cleanQuotes(line);
+        // Remove & alignment operators (not supported in animated mode)
+        cleaned = cleaned.replaceAll('&', '');
+        return cleaned;
+      });
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      cleanedLines.forEach((line, index) => {
+        if (index === 0) {
+          fileNode.append(String.raw`<div>\[${line}\]</div>`);
+        } else {
+          fileNode.append(String.raw`<div class="fragment">\[${line}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+  }
+
+  // Non-animated equation
+  let latexContent: string;
+
+  if (equation.content) {
+    latexContent = cleanQuotes(equation.content);
+  } else if (equation.lines && equation.lines.length > 0) {
+    const cleanedLines = equation.lines.map(cleanQuotes);
+    const separator = String.raw` \\ `;
+    latexContent = String.raw`\begin{aligned} ${cleanedLines.join(separator)} \end{aligned}`;
+  } else {
+    latexContent = '';
+  }
+
+  // Block equation using \[...\] delimiters (MathJax display mode)
+  fileNode.append(String.raw`<div class="equation-display" style="${alignStyle}">\[${latexContent}\]</div>`);
 }
