@@ -559,9 +559,6 @@ presentation:
                 y: center
             ]
       -slide:
-        transition:
-          type: zoom-in
-          duration: slow
         -title: "Visualisation d'équations"
           style:
             font: 28
@@ -598,10 +595,54 @@ presentation:
         type: concave
         duration: default    
         -title: "Analyse critique "
-        -text: "TODO: mettre une analyse critique de notre DSL et des améliorations possibles"
+        -text: "Vous avez sur cette slide un aperçu de notre prise de recul sur notre **DSL**, pour plus d'informations, veuillez lire notre rapport final!"
           style:
-            backgroundColor: #e0f23d
-            font: 16
+            font: 25
+          position: 
+            x:  center
+            y: 25
+            z: 5
+        -group: [
+          style: 
+            size: 40 50
+          position:
+            x: 30
+            y: 65
+          -text: "**Avantages**"
+            style:
+              backgroundColor: #3df25e
+              font: 25
+            position:
+              x: center
+          -list:
+              - "Grammaire YAML intuitive et lisible"
+              - "Validateurs efficaces avec suggestions"
+              - "Preview VSCode avec mise à jour automatique"
+            style:
+              font: 20
+            
+        ]
+        -group: [
+          style: 
+            size: 40 50
+          position:
+            x: 70
+            y: 65
+          -text: "**Inconvénients**"
+            style:
+              backgroundColor: #e2b72a
+              font: 25
+            position:
+              x: center
+          -list:
+              - "Ordre strict pour attributs optionnels"
+              - "Ambiguïtés après simplification du langage"
+              - "Gestion complexe des animations de code"
+              - "Unités optionnelles créant des confusions"
+            style:
+              font: 20
+            
+        ]
       -slide:
       transition:
         type: fade-out
