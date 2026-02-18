@@ -1,413 +1,1483 @@
-import fs from "fs";
-import { CompositeGeneratorNode, NL, toString } from "langium";
-import path from "path";
+import fs from 'fs';
+import { CompositeGeneratorNode, toString } from 'langium';
+import path from 'path';
 import {
-    Action,
-    Actuator,
-    App,
-    MessageTransition,
-    SendAction,
-    Sensor,
-    SignalTransition,
-    State,
-    TemporalTransition,
-    Transition,
-} from "../language-server/generated/ast";
-import { extractDestinationAndName } from "./cli-util";
+  Element,
+  Model,
+  Presentation,
+  Slide,
+  Group,
+  isGroup,
+  Text,
+  isText,
+  isCode,
+  Equation,
+  isEquation,
+  Paragraph,
+  isParagraph,
+  isList,
+  List,
+  Image,
+  isImage,
+  Video,
+  isVideo,
+  ZPosition,
+  isCoordinatePosition,
+  isBasicText,
+  isQuiz,
+  Quiz,
+  Code,
+  Plot,
+  isPlot,
+  isShorthandPosition,
+  CoordinatePosition,
+  SolidColor,
+  BackgroundValue,
+  GradientColor,
+  CodeAnimation,
+} from '../language-server/generated/ast';
+import { extractDestinationAndName } from './cli-util';
+import { parseTemplate } from './template-parser';
+import { extractTemplateTransition, extractTextDefaults, resolveTextStyles } from './template-utils';
+import { TemplateContext } from './template-types';
 
-export function generateInoFile(
-    app: App,
-    filePath: string,
-    destination: string | undefined
-): string {
-    const data = extractDestinationAndName(filePath, destination);
-    const generatedFilePath = `${path.join(data.destination, data.name)}.ino`;
+const DEFAULT_ELEMENT_STYLES = ['width: fit-content;', 'padding: 5px;'];
+const DEFAULT_TEXT_STYLE = 'margin: 0;';
+const ZINDEX_BACK_VALUE = -10;
+const ZINDEX_FRONT_VALUE = 100;
+let PLOT_COUNTER = 0;
 
-    const fileNode = new CompositeGeneratorNode();
-    compile(app, fileNode);
+export function generateRevealJsFile(model: Model, filePath: string, destination: string | undefined): string {
+  const data = extractDestinationAndName(filePath, destination);
+  const generatedFilePath = `${path.join(data.destination, data.name)}.html`;
 
-    if (!fs.existsSync(data.destination)) {
-        fs.mkdirSync(data.destination, { recursive: true });
-    }
-    fs.writeFileSync(generatedFilePath, toString(fileNode));
-    return generatedFilePath;
+  const fileNode = new CompositeGeneratorNode();
+  generateRevealJs(model, fileNode, path.dirname(path.resolve(filePath)), data.destination);
+
+  if (!fs.existsSync(data.destination)) {
+    fs.mkdirSync(data.destination, { recursive: true });
+  }
+  fs.writeFileSync(generatedFilePath, toString(fileNode));
+  return generatedFilePath;
 }
 
-
-function compile(app: App, fileNode: CompositeGeneratorNode) {
-    const hasSerial = hasSerialCommunication(app);
-
-    for (const brick of app.bricks) {
-        if (brick.$type === "LCDBrick") {
-            (brick as any).rs = 10;
-            (brick as any).enable = 11;
-            (brick as any).d4 = 12;
-            (brick as any).d5 = 13;
-            (brick as any).d6 = 14;
-            (brick as any).d7 = 15;
-            (brick as any).d8 = 16;
-            (brick as any).columns = 16;
-            (brick as any).rows = 2;
-        }
-    }
-
-    fileNode.append(
-        `// Wiring code generated from an SlideML model
-// Application name: ` + app.name + `
-` + (hasSerial ? `// Serial communication: 9600 baud (Standard Arduino Uno)
-` : ``) + `
-long debounce = 200;
-long stateEnteredTime = 0;
-int lastState = -1;
-` + (hasSerial ? `bool notPrint = true;
-` : ``) + `enum STATE {` +
-        app.states.map((s) => s.name).join(", "));
-    if (isUsingErrorState(app)) {
-        const errorCodes = getErrorCodes(app);
-        const uniqueErrorCodes = Array.from(new Set(errorCodes));
-        for (const code of uniqueErrorCodes) {
-            fileNode.append(`, error_` + code);
-        }
-    }
-    fileNode.append(`};
-
-STATE currentState = ` +
-        app.initial.ref?.name +
-        `;`,
-        NL
-    );
-
-    const lcdBrick = app.bricks.find(b => b.$type === "LCDBrick");
-
-    let lcdName: string | undefined = undefined;
-    let columns = 16;
-    let rows = 2;
-
-    if (lcdBrick) {
-        lcdName = lcdBrick.name;
-        columns = (lcdBrick as any).columns ?? 16;
-        rows = (lcdBrick as any).rows ?? 2;
-    }
-
-    if (app.bricks.some(b => "rs" in b)) {
-        fileNode.append(`
-#include <LiquidCrystal.h>
-LiquidCrystal ${lcdName}(10, 11, 12, 13, 14, 15, 16);
-`);
-    }
-
-    for (const brick of app.bricks) {
-        if (brick.$type === 'Sensor') {
-            fileNode.append(
-                `
-bool ` +
-                brick.name +
-                `BounceGuard = false;
-long ` +
-                brick.name +
-                `LastDebounceTime = 0;`,
-                NL
-            );
-        }
-    }
-    fileNode.append(`
-
-void setup() {`);
-
-    if (hasSerial) {
-        fileNode.append(`
-    Serial.begin(9600);
-    while(!Serial) { ; } // Wait for serial port`);
-    }
-
-    for (const brick of app.bricks) {
-        if (brick.$type === 'Sensor') {
-            compileSensor(brick, fileNode);
-        } else if (brick.$type === 'Actuator') {
-            compileActuator(brick, fileNode);
-        } else if ("rs" in brick) {
-        }
-    }
-
-    if (app.bricks.some(b => "rs" in b)) {
-        fileNode.append(`
-    ${lcdName}.begin(${columns}, ${rows});`);
-    }
-
-    compileErrorLedActuatorCode(app, fileNode);
-
-    fileNode.append(`
+/**
+ * Generate Reveal.js HTML as a string without writing to file (for preview)
+ */
+export function generateRevealJsString(model: Model, sourceDir: string): string {
+  const fileNode = new CompositeGeneratorNode();
+  // For preview, don't copy assets, just use paths as-is
+  generateRevealJs(model, fileNode, sourceDir, sourceDir, true);
+  return toString(fileNode);
 }
 
-void loop() {`);
-    if (hasSerial) {
-        fileNode.append(`
-    String serialInput = "";
-    if (Serial.available() > 0) {
-        serialInput = Serial.readStringUntil('\\n');
-        serialInput.trim();
-    }
-`, NL);
-    }
-    fileNode.append(`
-    if ((int)currentState != lastState) {
-        stateEnteredTime = millis();
-        lastState = (int)currentState;
-    }
+let CURRENT_SOURCE_DIR = '.';
+let CURRENT_OUTPUT_DIR = '.';
+let PROJECT_ROOT = '.';
 
-    switch (currentState) {`);
-
-    for (const state of app.states) {
-        compileState(state, fileNode, hasSerial);
-    }
-    if (isUsingErrorState(app)) {
-        const errorCodes = getErrorCodes(app);
-        const uniqueErrorCodes = Array.from(new Set(errorCodes));
-        for (const code of uniqueErrorCodes) {
-            fileNode.append(`
-        case error_` + code + `:
-            errorBlink(` + code + `);
-            break;`, NL);
-        }
-    }
-    fileNode.append(
-        `
-    }
-}`, NL);
-
-    if (isUsingErrorState(app)) {
-        generateErrorMethodCode(fileNode);
-    }
-}
-
-function hasSerialCommunication(app: App) {
-    const hasSerialSensor = app.useSerialMonitor !== undefined;
-    const hasSendAction = app.states.some(state => state.actions.some(action => action.$type === 'SendAction'));
-    return hasSerialSensor || hasSendAction;
-}
-
-function compileActuator(actuator: Actuator, fileNode: CompositeGeneratorNode) {
-    fileNode.append(
-        `
-    pinMode(` +
-        actuator.outputPin +
-        `, OUTPUT); // ` +
-        actuator.name +
-        ` [Actuator]`
-    );
-}
-
-function compileSensor(sensor: Sensor, fileNode: CompositeGeneratorNode) {
-    fileNode.append(`
-    pinMode(` + (sensor as any).inputPin + `, INPUT); // ` + sensor.name + ` [Sensor]`)
-
-}
-
-function compileState(state: State, fileNode: CompositeGeneratorNode, hasSerial: boolean) {
-    fileNode.append(`
-        case `+ state.name + `:`);
-
-    for (const action of state.actions) {
-        compileAction(action, fileNode);
-    }
-
-    if (state.transition !== null) {
-        compileTransition(state.transition, fileNode);
-    }
-
-    fileNode.append(NL, `\t\t\tbreak;`, NL);
-}
-
-function compileAction(action: Action, fileNode: CompositeGeneratorNode) {
-    if (action.$type === 'SendAction') {
-
-        if (action.lcd) {
-            compileLCDAction(action, fileNode);
-            return;
-        }
-        let message = action.message;
-        if (message && message.startsWith('"') && message.endsWith('"')) {
-            message = message.substring(1, message.length - 1);
-        }
-        fileNode.append(`
-            if (notPrint) {
-                Serial.println("` + message + `");
-                notPrint = false;
-            }`);
-        return
-    }
-    fileNode.append(`
-            digitalWrite(` + action.actuator?.ref?.outputPin + `, ` + action.value?.value + `);`);
-
-}
-
-function compileLCDAction(action: SendAction, fileNode: CompositeGeneratorNode) {
-    if (!action.lcdMessage) return;
-
-    const lcdName = action.lcd?.ref?.name ?? "lcd";
-
-    fileNode.append(`
-            ${lcdName}.setCursor(0, 0);
-            ${lcdName}.print("                ");  // clear line 0
-            ${lcdName}.setCursor(0, 1);
-            ${lcdName}.print("                ");  // clear line 1`);
-
-    for (const part of action.lcdMessage.parts) {
-        if (part.$type === "ConstantText") {
-            fileNode.append(`
-            ${lcdName}.setCursor(0, 0);
-            ${lcdName}.print("${part.value}");`);
-        }
-    }
-
-    for (const part of action.lcdMessage.parts) {
-        if (part.$type === "BrickValueRef") {
-            const brick = part.brick?.ref;
-            if (!brick) continue;
-
-            fileNode.append(`
-            ${lcdName}.setCursor(0, 1);`);
-
-            if ("inputPin" in brick) {
-                fileNode.append(`
-            ${lcdName}.print((digitalRead(${brick.inputPin}) == HIGH ? "HIGH" : "LOW "));`);
-            }
-            else if ("outputPin" in brick) {
-                fileNode.append(`
-            ${lcdName}.print((digitalRead(${brick.outputPin}) == HIGH ? "ON  " : "OFF "));`);
-            }
-        }
-    }
-}
-function recurssiveCompileTransition(transition: Transition, fileNode: CompositeGeneratorNode, parts: string[], debounces: string[]) {
-    if ((transition as any).transitions.length > 0) {
-        for (const subTransition of (transition as any).transitions) {
-            recurssiveCompileTransition(subTransition, fileNode, parts, debounces);
-        }
-    } else {
-        switch (transition.$type) {
-            case "TemporalTransition":
-                compileTemporalTransition(transition as unknown as TemporalTransition, fileNode, parts);
-                break;
-            case "SignalTransition":
-                compileSignalTransition(transition as unknown as SignalTransition, fileNode, parts, debounces);
-                break;
-            case "MessageTransition":
-                compileMessageTransition(transition as unknown as MessageTransition, fileNode, parts);
-                break;
-        }
-    }
-}
-
-function compileTransition(
-    transition: Transition,
-    fileNode: CompositeGeneratorNode
+function generateRevealJs(
+  model: Model,
+  fileNode: CompositeGeneratorNode,
+  sourceDir: string,
+  outputDir: string,
+  isPreview: boolean = false,
 ) {
-    const parts: string[] = [];
-    const debounces: string[] = [];
-    recurssiveCompileTransition(transition, fileNode, parts, debounces);
-
-    const op = (transition as any).connector?.value === 'AND' ? '&&' : '||';
-    if (parts.length === 0) {
-        parts.push('true');
+  CURRENT_SOURCE_DIR = path.resolve(sourceDir);
+  CURRENT_OUTPUT_DIR = path.resolve(outputDir);
+  PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+  // Generate HTML header
+  fileNode.append(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/tldreveal/dist/bundle/index.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.css" />
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"><\/script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+    
+    <style>
+  body { 
+    font-family: Arial, sans-serif;
+    ${
+      isPreview
+        ? `
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    `
+        : ''
     }
-    const condition = parts.length > 1 ? `(` + parts.join(` ` + op + ` `) + `)` : parts[0];
-    const nextName = (transition as any).next?.ref?.name ? (transition as any).next.ref.name : ((transition as any).errorCode !== undefined ? 'error_' + (transition as any).errorCode : undefined);
+  }
 
-    const debounceCode = debounces.length > 0 ? `\n\t\t\t\t` + debounces.join(`\n\t\t\t\t`) : '';
-    const hasSerial = hasSerialCommunication(transition.$container.$container as App);
+  ${
+    isPreview
+      ? `
+  /* Preview container with 16/9 ratio */
+  .preview-container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    border: 5px solid #aaa;
+    border-radius: 8px;
+    overflow: hidden;
+  }
 
-    const notPrintCode = hasSerial ? `
-                notPrint = true;` : '';
+  /* 16/9 aspect ratio wrapper */
+  .preview-aspect-ratio {
+    position: relative;
+    width: 100%;
+    padding-bottom: 50%; /* 16:10 ratio for 1920x960 */
+  }
 
-    fileNode.append(`
-            if (` + condition + `) {` + debounceCode + `
-                currentState = ` + nextName + `;` +
-        notPrintCode + `
-            }`);
+  .preview-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Let Reveal.js handle all the scaling based on 1920x960 reference */
+  .reveal {
+    /* Reveal.js will scale everything proportionally */
+  }
+  `
+      : ''
+  }/* =========================
+   Mentimeter – Quiz iframe
+   ========================= */
+
+/* Wrapper ratio 16:9 (Mentimeter officiel) */
+.menti-embed {
+  position: relative;
+  width: 100%;
+  padding-top: 35px;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
 }
 
-function compileTemporalTransition(transition: TemporalTransition, fileNode: any, parts: string[]) {
-    const delay = transition.delay;
-    parts.push(`(millis() - stateEnteredTime > ${delay})`);
-    return;
+.menti-embed > iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
 }
 
-function compileSignalTransition(transition: SignalTransition, fileNode: any, parts: string[], debounces: string[]) {
-    const sensorName = transition.sensor?.ref?.name;
-    fileNode.append(
-        NL,
-        "\t\t\t" + sensorName + `BounceGuard = millis() - ` +
-        sensorName + `LastDebounceTime > debounce;`
-    );
-    debounces.push(sensorName + `LastDebounceTime = millis();`);
-    const pin = transition.sensor?.ref?.inputPin;
-    const name = transition.sensor?.ref?.name;
-    const val = transition.value?.value;
-    parts.push(`(digitalRead(${pin}) == ${val} && ${name}BounceGuard)`);
-    return
+/* =========================
+   QR Code (responsive)
+   ========================= */
+
+/* Taille du QR proportionnelle au quiz */
+.menti-qr {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+
+  /* 👉 ajuste ici si besoin */
+  --qr-size: clamp(80px, 18%, 140px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-function compileMessageTransition(transition: MessageTransition, fileNode: any, parts: string[]) {
-    if (transition.any) {
-        parts.push(`(serialInput.length() > 0)`);
-    } else if (transition.pattern) {
-        let pattern = transition.pattern;
-        if ((pattern.startsWith('"') && pattern.endsWith('"')) ||
-            (pattern.startsWith("'") && pattern.endsWith("'"))) {
-            pattern = pattern.substring(1, pattern.length - 1);
-        }
-        parts.push(`(serialInput == "` + pattern + `")`)
+/* Boîte blanche du QR */
+.menti-qr .qr {
+  padding: 10px;
+  background: #fff;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+/* Canvas / image générée par QRCode.js */
+.menti-qr canvas,
+.menti-qr img {
+  width: var(--qr-size) !important;
+  height: var(--qr-size) !important;
+  display: block;
+}
+
+/* Masqué sur petits écrans */
+@media (max-width: 1100px) {
+  .menti-qr {
+    display: none;
+  }
+}
+
+.equation-display {
+    margin: 20px 0;
+    text-align: center;
+}
+.equation-inline {
+    display: inline;
+}
+
+/* =========================
+   Reveal.js integration
+   ========================= */
+
+.has-quiz .slide-content {
+  padding: 0 !important;
+  align-items: stretch !important;
+}
+
+/* Wrapper global du quiz */
+.quiz-wrap {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+/* Cas par défaut : pas de size dans la grammaire */
+.quiz-default {
+  width: 60%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Cas size explicite */
+.quiz-sized {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+/* Le ratio Mentimeter s’adapte toujours au conteneur */
+.quiz-default .menti-embed,
+.quiz-sized .menti-embed {
+  width: 100%;
+}
+
+/* =========================
+   Size explicite (fill)
+   ========================= */
+
+.menti-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.menti-box > iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+
+
+    </style>
+</head>
+<body>
+    ${isPreview ? '<div class="preview-container"><div class="preview-aspect-ratio"><div class="preview-content">' : ''}
+    <div class="reveal">
+        <div class="slides">`);
+
+  // Generate slides for each presentation
+  const presentation = model.presentation;
+  if (!presentation) {
+    throw new Error('No presentation found');
+  }
+  generatePresentationSlides(presentation, fileNode);
+
+  fileNode.append(`
+        </div>
+    </div>
+    ${isPreview ? '</div></div></div>' : ''}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"><\/script>
+    <script src="https://unpkg.com/tldreveal/dist/bundle/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.js"><\/script>
+    <script>
+      // Open an image in a fullscreen overlay. Accepts an HTMLImageElement or a URL string.
+      function openImageFullscreen(srcOrElem) {
+        const src = typeof srcOrElem === 'string' ? srcOrElem : (srcOrElem && srcOrElem.src) || srcOrElem;
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.background = 'rgba(0,0,0,0.95)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '2147483647';
+        overlay.onclick = function() { try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}; document.body.removeChild(overlay); };
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.maxWidth = '98%';
+        img.style.maxHeight = '98%';
+        img.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+        // Try to request fullscreen on the overlay for native fullscreen when available
+        try { if (overlay.requestFullscreen) overlay.requestFullscreen(); } catch(e) {}
+      }
+    <\/script>
+    <script>
+        Reveal.initialize({
+          hash: true,
+          center: true,
+          transition: 'slide',
+          ${
+            isPreview
+              ? `
+          // Preview mode: use 1920x960 as reference (16:10 ratio for better content fit)
+          width: 1920,
+          height: 960,
+          margin: 0.04,
+          minScale: 0.2,
+          maxScale: 1.5,
+          `
+              : `
+          // Export mode: larger canvas for tldreveal
+          width: 2000,
+          height: 1125,
+          minScale: 0.2,
+          maxScale: 2.0,
+          `
+          }
+          disableLayout: ${isPreview ? 'false' : 'true'},
+          slideNumber: ${presentation.displaySlideNumber ?? false},
+          scrollActivationWidth: undefined,
+          plugins: [Tldreveal.Tldreveal(), RevealHighlight],
+          tldreveal: {
+            disableLayoutWarning: false,
+          },
+        });
+    <\/script>
+    <script src="../plugin/quiz/js/jquery.min.js"></script>
+    <script src="../plugin/quiz/js/slickQuiz.js"></script>
+    <script src="../plugin/quiz/js/quiz.js"></script>
+<script>
+  Reveal.on('ready', function () {
+    prepareQuizzes({});
+  });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  function getQrSizeFromCSS(el) {
+  const style = getComputedStyle(el.closest('.menti-qr'));
+  const size = style.getPropertyValue('--qr-size');
+  return parseInt(size, 10) || 120;
+}
+
+function renderQuizQRCodes(scope) {
+  if (typeof QRCode !== 'function') return;
+
+  const root = scope || document;
+
+  root.querySelectorAll('[data-qr-target]').forEach((box) => {
+    const target = box.getAttribute('data-qr-target');
+    const id = box.getAttribute('data-qr-id');
+    if (!id || !target) return;
+
+    const el = document.getElementById(id);
+    if (!el || el.dataset.qrDone === '1') return;
+
+    const size = getQrSizeFromCSS(el);
+
+    el.innerHTML = '';
+    new QRCode(el, {
+      text: target,
+      width: size,
+      height: size,
+    });
+
+    el.dataset.qrDone = '1';
+  });
+}
+
+
+  Reveal.on('ready', function () {
+    renderQuizQRCodes(document);
+  });
+
+  Reveal.on('slidechanged', function (event) {
+    // ne rend que la slide courante
+    renderQuizQRCodes(event.currentSlide);
+    if (window.Plotly) {
+      Plotly.Plots.resize(event.currentSlide);
     }
-}
-
-function compileErrorLedActuatorCode(app: App, fileNode: CompositeGeneratorNode) {
-    if (isUsingErrorState(app)) {
-        fileNode.append(`
-    pinMode(12, OUTPUT); // Onboard LED for error blinking`, NL);
-    }
-}
-
-function isUsingErrorState(app: App): boolean {
-    return app.states.some(s => s.transition && (s.transition as any).errorCode !== undefined);
-}
-
-function getErrorCodes(app: App): number[] {
-    return app.states.map(s => s.transition).filter(t => t && (t as any).errorCode !== undefined).map(t => (t as any).errorCode);
-}
-
-function generateErrorMethodCode(fileNode: CompositeGeneratorNode) {
-    fileNode.append(`
-
-long blinkDuration = 200;
-long pauseDuration = 900;
-long currentBlinkNumber = 0;
-boolean currentBlinkState = false;
-boolean pauseBlink = false;
-long currentBlinkDuration = 0;
-
-void errorBlink(long errorCode) {
-    if (pauseBlink) {
-        if (millis() - currentBlinkDuration > pauseDuration) {
-            pauseBlink = false;
-        }
-        return;
-    }
-    if (millis() - currentBlinkDuration > blinkDuration) {
-        currentBlinkDuration = millis();
-        if (currentBlinkState) {
-            digitalWrite(12, LOW);
-            currentBlinkNumber++;
-            if (currentBlinkNumber == errorCode) {
-                currentBlinkNumber = 0;
-                pauseBlink = true;
-                currentBlinkDuration = millis();
+  });
+</script>
+    <script>
+      // Synchronize code explanations with Reveal.js fragments
+      function updateCodeExplanations() {
+        const currentSlide = document.querySelector('section.present');
+        if (!currentSlide) return;
+        
+        // Get the current fragment index from data-fragment attribute
+        const fragmentAttr = currentSlide.getAttribute('data-fragment');
+        const currentFragment = fragmentAttr ? parseInt(fragmentAttr) : -1;
+        
+        // Find all explanation elements in the current slide
+        const explanations = currentSlide.querySelectorAll('[class*="explain-"]');
+        
+        explanations.forEach(el => {
+          // Extract the line number from class like "explain-1", "explain-2", etc.
+          const match = el.className.match(/explain-(\\d+)/);
+          if (match) {
+            const lineNumber = parseInt(match[1]);
+            if (currentFragment >= lineNumber-2) {
+              el.style.opacity = '1';
+              el.style.visibility = 'visible';
+            } else {
+              el.style.opacity = '0';
+              el.style.visibility = 'hidden';
             }
-        } else {
-            digitalWrite(12, HIGH);
-        }
-        currentBlinkState = !currentBlinkState;
+          }
+        });
+      }
+      
+      // Initialize explanations on ready
+      Reveal.on('ready', updateCodeExplanations);
+      
+      // Update on slide change
+      Reveal.on('slidechanged', updateCodeExplanations);
+      
+      // Update on fragment shown/hidden
+      Reveal.on('fragmentshown', updateCodeExplanations);
+      Reveal.on('fragmenthidden', updateCodeExplanations);
+    <\/script>
+    <script>
+  function setupMentiQrAutoHide(scope) {
+    const root = scope || document;
+    const wrap = root.querySelector('.quiz-wrap');
+    const qr = root.querySelector('.menti-qr');
+    if (!wrap || !qr) return;
+
+    // reset quand on (re)arrive sur la slide
+    qr.style.display = 'flex';
+    wrap.dataset.qrHidden = '0';
+
+    const hide = () => {
+      if (wrap.dataset.qrHidden === '1') return;
+      qr.style.display = 'none';
+      wrap.dataset.qrHidden = '1';
+    };
+
+    // 1) clic/tap sur le conteneur
+    wrap.addEventListener('pointerdown', hide, { once: true });
+
+    // 2) focus dans l'iframe (souvent déclenché quand on clique dedans)
+    const iframe = root.querySelector('.menti-embed iframe, .menti-box iframe');
+    if (iframe) {
+      iframe.addEventListener('load', () => {
+        // Quand l'iframe recharge, on ne fait rien (Mentimeter peut reload),
+        // mais on peut au moins rebrancher un écouteur focus si besoin
+      });
+      iframe.addEventListener('focus', hide, { once: true });
     }
+
+    // 3) fallback : si l'utilisateur clique dans l'iframe, le focus passe à l'iframe
+    // (blur window est souvent déclenché)
+    window.addEventListener('blur', hide, { once: true });
+  }
+
+  Reveal.on('ready', (e) => setupMentiQrAutoHide(e.currentSlide || document));
+  Reveal.on('slidechanged', (e) => setupMentiQrAutoHide(e.currentSlide));
+</script>
+
+  </body>
+  </html>`);
 }
-`, NL);
+
+function loadTemplate(presentation: Presentation): TemplateContext | undefined {
+  console.log('[Template] Loading template...');
+  if (!presentation.template) return undefined;
+
+  const templateName = sanitizeLink(presentation.template);
+  const templateRoot = path.resolve(PROJECT_ROOT, 'templates', templateName);
+
+  const templatePath = path.join(templateRoot, `${templateName}.sml`);
+
+  if (!fs.existsSync(templatePath)) {
+    console.warn(`Template '${templateName}' not found at ${templatePath}`);
+    return undefined;
+  }
+
+  const templateModel = parseTemplate(templatePath);
+
+  console.log('[Template] Requested template:', presentation.template);
+  console.log('[Template] Template path:', templatePath);
+
+  console.log('[Template] slots:', {
+    title: templateModel.titleTemplate?.elements.length,
+    body: templateModel.bodyTemplate?.elements.length,
+  });
+
+  return {
+    titleElements: templateModel.titleTemplate?.elements,
+    bodyElements: templateModel.bodyTemplate?.elements,
+    backgroundColor: templateModel.defaults?.background?.color,
+    textDefaults: extractTextDefaults(templateModel),
+    transition: extractTemplateTransition(templateModel),
+  };
+}
+
+function generatePresentationSlides(presentation: Presentation, fileNode: CompositeGeneratorNode) {
+  const templateCtx = loadTemplate(presentation);
+  presentation.slides.forEach((slide, index) => {
+    generateSlide(slide, index, templateCtx, fileNode);
+  });
+}
+
+type SlideMLTransition = { type: string; duration?: string } | undefined;
+
+function getRevealTransitionAttributes(transition: SlideMLTransition): string {
+  if (!transition) return '';
+
+  const revealTransition = normalizeRevealTransitionValue(transition.type);
+  const speedAttr = mapDurationToRevealSpeed(transition.duration);
+
+  const attrs: string[] = [];
+  if (revealTransition) attrs.push(`data-transition="${revealTransition}"`);
+  if (speedAttr) attrs.push(`data-transition-speed="${speedAttr}"`);
+
+  return attrs.length ? ' ' + attrs.join(' ') : '';
+}
+
+function normalizeRevealTransitionValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const cleaned = value.trim().replaceAll(/\s+/g, ' ');
+  const base = '(none|fade|slide|convex|concave|zoom)';
+  const single = new RegExp(`^${base}(-in|-out)?$`);
+
+  if (single.test(cleaned)) return cleaned;
+
+  return undefined;
+}
+
+function mapDurationToRevealSpeed(duration: string | undefined): 'fast' | 'default' | 'slow' {
+  if (duration === undefined) return 'default';
+  if (duration !== 'fast' && duration !== 'default' && duration !== 'slow') {
+    return 'default';
+  }
+  return duration;
+}
+
+function generateSlide(
+  slide: Slide,
+  index: number,
+  template: TemplateContext | undefined,
+  fileNode: CompositeGeneratorNode,
+) {
+  const normalizedTransition = slide.transition
+    ? {
+        type: slide.transition.type,
+        duration: slide.transition.duration ?? 'default',
+      }
+    : template?.transition
+      ? {
+          type: template.transition.type,
+          duration: template.transition.duration ?? 'default',
+        }
+      : undefined;
+  const transitionAttrs = getRevealTransitionAttributes(normalizedTransition);
+
+  const bg = slide.backgroundColor ?? template?.backgroundColor;
+
+  const slideStyle = `
+    width: 100%;
+    height: 100%;
+    ${bg ? resolveBackground(bg) : ''}
+  `;
+  const hasQuiz = slide.elements.some((e) => isQuiz(e));
+  fileNode.append(`<section${transitionAttrs} class="${hasQuiz ? 'has-quiz' : ''}" style="${slideStyle}">`);
+  // Ajout d'un wrapper pour le contenu de la diapositive avec position relative
+  fileNode.append(
+    '<div class="slide-content" style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 2%" >',
+  );
+
+  const templateElements = index === 0 ? template?.titleElements : template?.bodyElements;
+
+  templateElements?.forEach((el) => generateElement(el, fileNode, template));
+
+  slide.elements.forEach((el) => generateElement(el, fileNode, template));
+
+  fileNode.append('</div>');
+  fileNode.append('</section>');
+}
+
+function generateGroup(
+  group: Group,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+  template?: TemplateContext,
+) {
+  const groupStyles = [...styles];
+  const grpPos = group.position;
+  const hasPosition = grpPos && (grpPos.x || grpPos.y || grpPos.z); //TODO process general flat position
+  if (!hasPosition) {
+    groupStyles.unshift('position: relative;'); // position relative si le groupe n'a pas de position définie
+  }
+  const animationClass = animationData?.classes || '';
+  const classAttr = animationClass ? `class="group ${animationClass}"` : 'class="group"';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
+  if (groupStyles.length > 0) {
+    fileNode.append(` style="${groupStyles.join(' ')}"`);
+  }
+  fileNode.append('>');
+  // applyAnimation(group.animation); TODO
+
+  for (const child of group.elements) {
+    generateElement(child, fileNode, template);
+  }
+
+  fileNode.append('</div>');
+}
+
+function generateElement(element: Element, fileNode: CompositeGeneratorNode, template?: TemplateContext) {
+  const styles: string[] = getElementStyles(element);
+  styles.push(getElementPosition(element));
+  const animationData = getElementAnimation(element);
+  if (isGroup(element)) return generateGroup(element, fileNode, styles, animationData, template);
+  if (isText(element)) return generateText(element, fileNode, styles, animationData, template);
+  if (isImage(element)) return generateImage(element, fileNode, styles, animationData);
+  if (isVideo(element)) return generateVideo(element, fileNode, styles, animationData);
+  if (isQuiz(element)) return generateQuiz(element, fileNode, styles, animationData);
+  if (isPlot(element)) return generatePlot(element, fileNode, styles, animationData);
+  throw new Error(`Unhandled element type: ${(element as Element).$type}`);
+}
+
+function getElementStyles(element: Element): string[] {
+  const styles: string[] = isQuiz(element) ? ['box-sizing: border-box;'] : [...DEFAULT_ELEMENT_STYLES];
+  if (!element.style) return styles;
+  if (element.style.backgroundColor) {
+    styles.push(resolveBackground(element.style.backgroundColor));
+  }
+  styles.push(...(getSizeStyles(element) || []));
+  styles.push(...(getFontStyles(element) || []));
+  return styles;
+
+  function getSizeStyles(element: Element): string[] | undefined {
+    let sizeStyles: string[] = [];
+    const isImageStyle = isImage(element);
+
+    if (!element.style?.size) return;
+
+    if (element.style.size.width && element.style.size.width.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-width: ${element.style.size.width.value}vw;`);
+      } else {
+        sizeStyles.push(`width: ${element.style.size.width.value}%;`);
+      }
+    }
+
+    if (element.style.size.height && element.style.size.height.value !== 'auto') {
+      if (isImageStyle) {
+        sizeStyles.push(`max-height: ${element.style.size.height.value}vh;`);
+      } else {
+        sizeStyles.push(`height: ${element.style.size.height.value}%;`);
+      }
+    }
+    return sizeStyles;
+  }
+
+  function getFontStyles(element: Element): string[] | undefined {
+    let fontStyles: string[] = [];
+    if (!element.style?.font) return;
+    if (element.style.font.name) {
+      fontStyles.push(`font-family: ${element.style.font.name};`);
+    }
+    if (element.style.font.size) {
+      fontStyles.push(`font-size: ${element.style.font.size}px;`);
+    }
+    if (element.style.font.color) {
+      fontStyles.push(`color: ${element.style.font.color};`);
+    }
+    if (element.style.font.transformations) {
+      for (const transformation of element.style.font.transformations) {
+        switch (transformation) {
+          case 'bold':
+            fontStyles.push('font-weight: bold;');
+            break;
+          case 'italic':
+            fontStyles.push('font-style: italic;');
+            break;
+          case 'underline':
+            fontStyles.push('text-decoration: underline;');
+            break;
+        }
+      }
+    }
+    return fontStyles;
+  }
+}
+
+function getElementPosition(element: Element): string {
+  if (!element.position) return '';
+  let positionStyles: string[] = [];
+  let transformStyles: string[] = [];
+  let X: string | CoordinatePosition = element.position.x
+    ? isCoordinatePosition(element.position.x)
+      ? element.position.x
+      : (element.position.x as any).$cstNode
+        ? (element.position.x as any).$cstNode.text?.trim()
+        : undefined
+    : undefined;
+  let Y: string | CoordinatePosition = element.position.y
+    ? isCoordinatePosition(element.position.y)
+      ? element.position.y
+      : (element.position.y as any).$cstNode
+        ? (element.position.y as any).$cstNode.text?.trim()
+        : undefined
+    : undefined;
+  if (isShorthandPosition(element.position) && element.position.general === 'center') {
+    X = 'center';
+    Y = 'center';
+    console.log('[Position] Shorthand "center" expanded to x=center, y=center');
+  }
+  getXPosition(X, positionStyles, transformStyles);
+  getYPosition(Y, positionStyles, transformStyles);
+  getZPosition(element.position.z, positionStyles);
+  getRotation(element, transformStyles);
+  if (X || Y) {
+    positionStyles.unshift('position: absolute;'); // position absolute si une position est définie pour positionner par rapport au conteneur parent
+  }
+
+  if (transformStyles.length > 0) {
+    positionStyles.push(`transform: ${transformStyles.join(' ')};`);
+  }
+  return positionStyles.join(' ');
+
+  function getRotation(element: Element, transformStyles: string[]) {
+    if (element.style && element.style.rotation) {
+      transformStyles.push(`rotate(${element.style.rotation}deg)`);
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement horizontal à la liste des styles et de transformation
+   * @param x la position horizontale
+   * @param styles la liste des styles
+   * @param transformStyles la liste des styles de transformation
+   */
+  function getXPosition(x: string | CoordinatePosition | undefined, styles: string[], transformStyles: string[]) {
+    if (!x) return;
+    if (isCoordinatePosition(x) && x.value !== undefined) {
+      styles.push(`left: ${x.value}%;`);
+      transformStyles.push('translateX(-50%)');
+      return;
+    }
+    switch (x) {
+      case 'left':
+        styles.push('left: 2%;');
+        break;
+      case 'center':
+        styles.push('left: 50%;');
+        transformStyles.push('translateX(-50%)');
+        break;
+      case 'right':
+        styles.push('right: 2%;');
+        break;
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement vertical à la liste des styles et de transformation
+   * @param y la position verticale
+   * @param styles la liste des styles
+   * @param transformStyles la liste des styles de transformation
+   */
+  function getYPosition(y: string | CoordinatePosition | undefined, styles: string[], transformStyles: string[]) {
+    if (!y) return;
+    if (isCoordinatePosition(y) && y.value !== undefined) {
+      styles.push(`top: ${y.value}%;`);
+      transformStyles.push('translateY(-50%)');
+    }
+    switch (y) {
+      case 'top':
+        styles.push('top: 2%;');
+        break;
+      case 'center':
+        styles.push('top: 50%;');
+        transformStyles.push('translateY(-50%)');
+        break;
+      case 'bottom':
+        styles.push('bottom: 2%;');
+        // transformStyles.push('translateY(-100%)');
+        break;
+    }
+  }
+
+  /**
+   * Ajoute les styles de positionnement en Z à la liste des styles
+   * @param z la position en Z
+   * @param styles la liste des styles
+   */
+  function getZPosition(z: ZPosition | undefined, styles: string[]) {
+    if (!z) return;
+    if (isCoordinatePosition(z)) {
+      if (z.value !== undefined) {
+        styles.push(`z-index: ${z.value};`);
+      }
+    } else {
+      const value = (z as any).$cstNode?.text?.trim();
+      switch (value) {
+        case 'front':
+          styles.push(`z-index:${ZINDEX_FRONT_VALUE};`);
+          break;
+        case 'back':
+          styles.push(`z-index: ${ZINDEX_BACK_VALUE};`);
+          break;
+      }
+    }
+  }
+}
+
+function sanitizeLink(link: string) {
+  if (!link) return '';
+  if (link.startsWith('"') && link.endsWith('"')) return link.substring(1, link.length - 1);
+  if (link.startsWith("'") && link.endsWith("'")) return link.substring(1, link.length - 1);
+  return link;
+}
+
+interface AnimationData {
+  classes?: string;
+  attributes?: string;
+}
+function getElementAnimation(element: Element): AnimationData | undefined {
+  if (!element.animation) return undefined;
+  const animation = element.animation;
+  const order = animation.order;
+  const type = animation.animationType ? animation.animationType : '';
+  return { classes: `fragment ${type}`, attributes: `data-fragment-index="${order}"` };
+}
+
+//Quiz helpers
+function sanitizeStringLiteral(s: string | undefined): string {
+  if (s == null) return '';
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.substring(1, s.length - 1);
+  }
+  return s;
+}
+function escapeHtml(s: string): string {
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+function quizHasExplicitSize(quizNode: Quiz): boolean {
+  const s = quizNode.style?.size;
+  if (!s) return false;
+
+  const w = s.width?.value;
+  const h = s.height?.value;
+
+  const hasW = w !== undefined && w !== 'auto';
+  const hasH = h !== undefined && h !== 'auto';
+
+  return hasW || hasH;
+}
+
+function displayOnlineQuiz(quizNode: Quiz, fileNode: CompositeGeneratorNode) {
+  if (!quizNode.link) return;
+  const raw = sanitizeLink(quizNode.link);
+  if (!raw) return;
+
+  if (!isRemoteLink(raw)) return;
+
+  const src = encodeURI(raw);
+
+  const joinUrlRaw = sanitizeStringLiteral((quizNode as any).joinUrl);
+  const joinCodeRaw = sanitizeStringLiteral((quizNode as any).joinCode);
+
+  const joinUrl = (joinUrlRaw || '').trim();
+  const joinCode = (joinCodeRaw || '').trim();
+
+  const hasJoinInfo = !!joinUrl || !!joinCode;
+  const effectiveJoinUrl = (joinUrl || (joinCode ? 'https://www.menti.com' : '')).trim();
+
+  const qrTarget = joinCode
+    ? `${effectiveJoinUrl}?code=${encodeURIComponent(joinCode.replaceAll(/\s+/g, ''))}`
+    : effectiveJoinUrl;
+
+  const qrId = `qr_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+
+  const hasSize = quizHasExplicitSize(quizNode);
+  const wrapperClass = hasSize ? 'menti-box' : 'menti-embed';
+
+  fileNode.append(`
+    <div class="${wrapperClass}"
+         onclick="event.stopPropagation()"
+         onmousedown="event.stopPropagation()"
+         onmouseup="event.stopPropagation()"
+         onwheel="event.stopPropagation()">
+
+      <iframe
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+        allowfullscreen="true"
+        allowtransparency="true"
+        frameborder="0"
+        src="${src}">
+      </iframe>
+
+      ${
+        hasJoinInfo
+          ? `
+      <div class="menti-qr">
+        <div class="qr" data-qr-id="${qrId}" data-qr-target="${escapeHtml(qrTarget)}">
+          <div id="${qrId}"></div>
+        </div>
+      </div>
+      `
+          : ''
+      }
+    </div>
+  `);
+}
+
+function generateQuiz(
+  quizNode: Quiz,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
+  const hasSize = quizHasExplicitSize(quizNode);
+  const sizeClass = hasSize ? 'quiz-sized' : 'quiz-default';
+
+  fileNode.append(
+    `<div class="quiz-wrap ${sizeClass} ${animationClass}" ${animationAttributes} onclick="event.stopPropagation()"`,
+  );
+
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+
+  fileNode.append('>');
+
+  if (quizNode.link) {
+    displayOnlineQuiz(quizNode, fileNode);
+    fileNode.append(`</div>`); // ✅ on ferme toujours quiz-wrap
+    return;
+  }
+
+  fileNode.append('<!-- Quiz node: no link -->');
+  fileNode.append('</div>');
+}
+
+function isRemoteLink(link: string) {
+  return /^https?:\/\//i.test(link) || link.startsWith('data:');
+}
+
+function copyLocalAssetIfNeeded(link: string): string {
+  const clean = sanitizeLink(link);
+  if (isRemoteLink(clean)) return clean;
+
+  const normalized = clean.replaceAll('\\', '/');
+  const stripped = normalized.replace(/^\/+/, '');
+
+  let candidate =
+    path.isAbsolute(normalized) && fs.existsSync(normalized) ? normalized : path.resolve(CURRENT_SOURCE_DIR, stripped);
+  if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+    if (!fs.existsSync(CURRENT_OUTPUT_DIR)) fs.mkdirSync(CURRENT_OUTPUT_DIR, { recursive: true });
+    const destName = path.basename(candidate);
+    const destPath = path.join(CURRENT_OUTPUT_DIR, destName);
+    try {
+      fs.copyFileSync(candidate, destPath);
+      return destName;
+    } catch (e) {
+      console.error(`JeyaSlides generator: failed to copy asset '${candidate}' to '${destPath}': ${e}`);
+      return clean;
+    }
+  }
+
+  return clean;
+}
+
+function getYouTubeEmbed(link: string): string | null {
+  if (!link) return null;
+  const clean = sanitizeLink(link);
+  const watchMatch = clean.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch?.[1]) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  const shortMatch = clean.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch?.[1]) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  const embedMatch = clean.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+  if (embedMatch?.[1]) return `https://www.youtube.com/embed/${embedMatch[1]}`;
+  return null;
+}
+
+function getMimeTypeFromFilename(filename: string): string {
+  if (!filename) return 'video/mp4';
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  switch (ext) {
+    case 'mp4':
+      return 'video/mp4';
+    case 'webm':
+      return 'video/webm';
+    case 'ogg':
+      return 'video/ogg';
+    case 'mpg':
+    case 'mpeg':
+      return 'video/mpeg';
+    case 'wmv':
+      return 'video/x-ms-wmv';
+    default:
+      return 'video/mp4';
+  }
+}
+
+function generateList(
+  listNode: List,
+  fileNode: CompositeGeneratorNode,
+  elementStyle: any,
+  template?: TemplateContext,
+  styles: string[] = [],
+) {
+  const ordered = (listNode as any).ordered === true || (listNode as any).ordered === 'true';
+
+  const tag = ordered ? 'ol' : 'ul';
+  const resolvedTextStyles = resolveTextStyles('text', elementStyle, template);
+  const listStyles = ['margin: 5vw;', 'padding-left: 1.2em;', ...styles, ...resolvedTextStyles];
+  fileNode.append(`<${tag} style="${listStyles.join(' ')}">`);
+  for (const item of listNode.items ?? []) {
+    const raw = sanitizeStringLiteral(item);
+    let html = markdownToHtml(raw);
+    html = applyInlineHighlight(html);
+
+    fileNode.append(`<li>${html}</li>`);
+  }
+  fileNode.append(`</${tag}>`);
+}
+
+function generateImage(
+  image: Image,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
+  const srcRaw = copyLocalAssetIfNeeded(image.link);
+  const src = isRemoteLink(srcRaw) ? encodeURI(srcRaw) : srcRaw;
+  const classAttr = animationClass ? `class="image ${animationClass}"` : 'class="image"';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><img src="${src}" alt="image" `);
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+  fileNode.append(` onclick="openImageFullscreen(this)" onerror="this.style.display='none'"/></div>`);
+}
+
+function generateVideo(
+  video: Video,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+) {
+  const animationClass = animationData?.classes || '';
+  const animationAttributes = animationData?.attributes || '';
+  const raw = sanitizeLink(video.link);
+  const classAttr = animationClass ? `class="video ${animationClass}"` : 'class="video"';
+  const ytEmbed = getYouTubeEmbed(raw);
+  if (ytEmbed) {
+    fileNode.append(`<div ${classAttr} ${animationAttributes}><iframe `);
+    if (styles.length > 0) {
+      fileNode.append(`style="${styles.join(' ')}"`); //TODO: adapt size according to styles width="960" height="540"
+    }
+    fileNode.append(
+      `src="${ytEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`,
+    );
+    return;
+  }
+
+  const src = copyLocalAssetIfNeeded(raw);
+  const videoSrc = isRemoteLink(src) ? encodeURI(src) : src.replaceAll('\\', '/');
+  const mime = getMimeTypeFromFilename(videoSrc);
+  fileNode.append(`<div ${classAttr} ${animationAttributes}><video controls `);
+  if (styles.length > 0) {
+    fileNode.append(`style="${styles.join(' ')}"`);
+  }
+  fileNode.append(
+    `><source src="${videoSrc}" type="${mime}">Your browser does not support the video tag.</source></video></div>`,
+  );
+}
+
+function generateText(
+  text: Text,
+  fileNode: CompositeGeneratorNode,
+  styles: string[],
+  animationData: AnimationData | undefined,
+  template?: TemplateContext,
+) {
+  const animationClass = animationData?.classes || '';
+  const classAttr = animationClass ? `class="text ${animationClass}"` : 'class="text"';
+  const animationAttributes = animationData?.attributes || '';
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
+
+  if (isBasicText(text) && text.align) {
+    styles.push(`display:flex; justify-content:${text.align};`);
+  }
+
+  if (styles.length > 0) {
+    fileNode.append(` style="${styles.join(' ')}"`);
+  }
+  fileNode.append('>');
+
+  if (isCode(text)) {
+    generateCode(text, fileNode);
+  } else if (isEquation(text)) {
+    generateEquation(text, fileNode);
+  } else if (isParagraph(text)) {
+    generateParagraph(text, fileNode, text.style, template);
+  } else if (isList(text)) {
+    generateList(text as any, fileNode, text.style, template, styles);
+  } else {
+    throw new Error(`Unsupported Text type: ${text.$type}`);
+  }
+
+  fileNode.append('</div>');
+}
+
+function generateCode(code: Code, fileNode: CompositeGeneratorNode) {
+  const lang = code.language ? code.language : 'plaintext';
+  const hasExplanations = code.explanations && code.explanations.length > 0;
+  if (code.codeAnimation && hasExplanations) {
+    generateExplainedCode(code, lang, fileNode, code.codeAnimation);
+    return;
+  }
+  if (code.codeAnimation) {
+    generateCodeBlock(code.content, lang, fileNode, code.codeAnimation);
+    return;
+  }
+  if (hasExplanations) {
+    generateExplainedCode(code, lang, fileNode);
+    return;
+  }
+  generateCodeBlock(code.content, lang, fileNode);
+
+  function generateExplainedCode(
+    code: Code,
+    language: string,
+    fileNode: CompositeGeneratorNode,
+    codeAnimation?: CodeAnimation,
+  ) {
+    fileNode.append(
+      '<div class="group" style="display: flex; flex-direction: row; align-items: center; min-width: 800px; max-width: 80%;">',
+    );
+    generateCodeBlock(code.content, language, fileNode, codeAnimation);
+    fileNode.append('<div class="code-explanations" style="margin: 20px 0; ">');
+    for (const explanation of code.explanations) {
+      let explainClass = '';
+      let style = '';
+      if (codeAnimation) {
+        explainClass = `class="explain-${explanation.line}"`;
+        style = 'opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out;';
+      }
+      fileNode.append(
+        `<div ${explainClass} style="font-size: .55em; line-height: 1.2em; text-align: left; ${style}">${explanation.content}</div>`,
+      );
+    }
+    fileNode.append('</div>');
+    fileNode.append('</div>');
+  }
+
+  function generateCodeBlock(
+    content: string,
+    language: string,
+    fileNode: CompositeGeneratorNode,
+    animation?: CodeAnimation,
+  ) {
+    let lineAnimation = '';
+    if (animation) {
+      lineAnimation = `data-line-numbers="${animation.ranges
+        .map((r) => (!r.end || r.start === r.end ? r.start : `${r.start}-${r.end}`))
+        .join('|')}"`;
+    }
+    fileNode.append(
+      `<pre style="width: fit-content"><code class="language-${language}" data-trim ${lineAnimation}>${content}</code></pre>`,
+    );
+  }
+}
+
+function markdownToHtml(markdown: string): string {
+  if (!markdown) return '';
+  let html = markdown;
+
+  // Bold **text**
+  html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  // Italic *text*
+  html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+  // Underline __text__
+  html = html.replace(/__(.+?)__/g, '<u>$1</u>');
+  // Strikethrough ~~text~~
+  html = html.replace(/~~(.+?)~~/g, '<s>$1</s>');
+  // Inline code `code`
+  html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+  // Links [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  // Line breaks
+  html = html.replace(/\n/g, '<br/>');
+  return html;
+}
+
+function applyInlineHighlight(html: string): string {
+  if (!html) return html;
+
+  return html.replace(/\[\!(.+?)\!\]/g, '<span class="highlight">$1</span>');
+}
+
+function generateParagraph(
+  paragraph: Paragraph,
+  fileNode: CompositeGeneratorNode,
+  elementStyle: any,
+  template: TemplateContext | undefined,
+) {
+  const tag = paragraph.type === 'title' ? 'h1' : paragraph.type === 'subtitle' ? 'h2' : 'p';
+
+  const alignStyle = paragraph.align ? `text-align: ${paragraph.align};` : '';
+  const resolvedStyles = resolveTextStyles(paragraph.type, elementStyle, template);
+
+  let html = markdownToHtml(paragraph.content);
+  html = applyInlineHighlight(html);
+
+  fileNode.append(
+    `<${tag} style="${DEFAULT_TEXT_STYLE}${alignStyle}${resolvedStyles.join(' ')}">
+      ${html}
+     </${tag}>`,
+  );
+}
+
+function generatePlot(plot: Plot, fileNode: CompositeGeneratorNode, styles: String[], animationData?: AnimationData) {
+  const plotId = `plot_${PLOT_COUNTER++}`;
+
+  const plotStyles = styles.filter((s) => !s.includes('fit-content'));
+
+  const finalStyles = ['width: 80%;', 'height: 60%;', 'min-height: 300px;', 'visibility: hidden;', ...plotStyles];
+
+  const animationClass = animationData?.classes ?? '';
+  const animationAttributes = animationData?.attributes ?? '';
+
+  const classAttr = animationClass ? `class="plot-container ${animationClass}"` : `class="plot-container"`;
+
+  fileNode.append(`<div ${classAttr} ${animationAttributes}`);
+
+  if (finalStyles.length > 0) {
+    fileNode.append(` style="${finalStyles.join(' ')}"`);
+  }
+
+  fileNode.append(`>`);
+  fileNode.append(`<div id="${plotId}" style="width:100%; height:100%;"></div>`);
+  fileNode.append(`</div>`);
+
+  const x = plot.plotData?.xValues?.values ?? [];
+  const y = plot.plotData?.yValues?.values ?? [];
+  const labels = plot.plotData?.labels?.values ?? [];
+
+  const hasLabels = labels.length > 0;
+
+  const plotType = plot.plotType;
+  const xLabel = plot.plotLayout?.xLabel;
+  const yLabel = plot.plotLayout?.yLabel;
+
+  const hoverTemplate = hasLabels
+    ? '%{text}<br>Study hours: %{x}<br>Score: %{y}<extra></extra>'
+    : 'Study hours: %{x}<br>Score: %{y}<extra></extra>';
+
+  fileNode.append(`
+  <script>
+  (function () {
+    const trace = {
+      x: ${JSON.stringify(x)},
+      y: ${JSON.stringify(y)},
+      type: "${plotType}",
+      mode: "${plotType === 'scatter' ? 'markers' : 'lines'}",
+      ${hasLabels ? `text: ${JSON.stringify(labels)},` : ''}
+      hovertemplate: ${JSON.stringify(hoverTemplate)}
+    };
+
+    const layout = {
+      autosize: true,
+      margin: { t: 30, l: 40, r: 20, b: 40 },
+      ${xLabel ? `xaxis: { title: ${JSON.stringify(xLabel)} },` : ''}
+      ${yLabel ? `yaxis: { title: ${JSON.stringify(yLabel)} },` : ''}
+    };
+
+    function renderPlot_${plotId}() {
+      const el = document.getElementById("${plotId}");
+      if (!el) return;
+
+      const slide = el.closest("section");
+      if (!slide || !slide.classList.contains("present")) return;
+
+      Plotly.newPlot("${plotId}", [trace], layout, { responsive: true });
+      el.parentElement.style.visibility = "visible";
+    }
+
+    function bindReveal_${plotId}() {
+      if (!window.Reveal || !Reveal.isReady()) return false;
+
+      Reveal.on("ready", renderPlot_${plotId});
+      Reveal.on("slidechanged", renderPlot_${plotId});
+      renderPlot_${plotId}();
+
+      return true;
+    }
+
+    if (!bindReveal_${plotId}()) {
+      const i = setInterval(() => {
+        if (bindReveal_${plotId}()) clearInterval(i);
+      }, 50);
+    }
+  })();
+  </script>
+  `);
+}
+
+function resolveBackground(background: string | BackgroundValue): string {
+  if (typeof background === 'string') {
+    return `background-color: ${background};`;
+  }
+
+  if ((background as SolidColor).color !== undefined) {
+    return `background: ${(background as SolidColor).color};`;
+  }
+  const gradient = background as GradientColor;
+
+  const from = gradient.from;
+  const to = gradient.to;
+  let direction = 'to bottom';
+
+  if (gradient.modifier) {
+    if (gradient.modifier === 'horizontal') direction = 'to right';
+    else if (gradient.modifier === 'vertical') direction = 'to bottom';
+    else if (gradient.modifier === 'diagonal') direction = 'to bottom right';
+    else if (gradient.modifier === 'radial') {
+      return `background: radial-gradient(circle, ${from}, ${to});`;
+    } else if ((gradient.modifier as any).angle !== undefined) {
+      return `background: linear-gradient(${(gradient.modifier as any).angle}deg, ${from}, ${to});`;
+    }
+  }
+
+  return `background: linear-gradient(${direction}, ${from}, ${to});`;
+}
+
+function generateEquation(equation: Equation, fileNode: CompositeGeneratorNode) {
+  // Handle text alignment (default is center)
+  const alignStyle = equation.align ? `text-align: ${equation.align};` : 'text-align: center;';
+
+  // Helper to clean quotes from content
+  const cleanQuotes = (str: string) => {
+    if (str.startsWith('"') && str.endsWith('"')) {
+      return str.substring(1, str.length - 1);
+    }
+    return str;
+  };
+
+  // Check if animation is enabled
+  if (equation.equationAnimation) {
+    const hasSteps = equation.equationAnimation.steps && equation.equationAnimation.steps.length > 0;
+    const hasSplit =
+      equation.equationAnimation.separator !== undefined && equation.equationAnimation.separator !== null;
+
+    if (hasSteps) {
+      // Animation with custom steps: each step is a separate fragment
+      const cleanedSteps = equation.equationAnimation.steps.map(cleanQuotes);
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      cleanedSteps.forEach((step, index) => {
+        if (index === 0) {
+          // First step visible by default
+          fileNode.append(String.raw`<div>\[${step}\]</div>`);
+        } else {
+          // Other steps appear progressively as fragments
+          fileNode.append(String.raw`<div class="fragment">\[${step}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+    if (hasSplit && equation.content && equation.equationAnimation.separator) {
+      // Split animation: build equation progressively with each part as complete LaTeX (display mode)
+      const separator = cleanQuotes(equation.equationAnimation.separator);
+      const fullEquation = cleanQuotes(equation.content);
+      const parts = fullEquation.split(separator);
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      // Build accumulated equation for each step
+      let accumulated = '';
+      parts.forEach((part, index) => {
+        accumulated += part;
+        if (index === 0) {
+          // First equation visible by default
+          fileNode.append(String.raw`<div>\[${accumulated}\]</div>`);
+        } else {
+          // Other equations appear progressively as fragments
+          fileNode.append(String.raw`<div class="fragment">\[${accumulated}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+    if (equation.lines && equation.lines.length > 0) {
+      const cleanedLines = equation.lines.map((line) => {
+        let cleaned = cleanQuotes(line);
+        // Remove & alignment operators (not supported in animated mode)
+        cleaned = cleaned.replaceAll('&', '');
+        return cleaned;
+      });
+
+      fileNode.append(`<div class="equation-display" style="${alignStyle}">`);
+
+      cleanedLines.forEach((line, index) => {
+        if (index === 0) {
+          fileNode.append(String.raw`<div>\[${line}\]</div>`);
+        } else {
+          fileNode.append(String.raw`<div class="fragment">\[${line}\]</div>`);
+        }
+      });
+
+      fileNode.append('</div>');
+      return;
+    }
+  }
+
+  // Non-animated equation
+  let latexContent: string;
+
+  if (equation.content) {
+    latexContent = cleanQuotes(equation.content);
+  } else if (equation.lines && equation.lines.length > 0) {
+    const cleanedLines = equation.lines.map(cleanQuotes);
+    const separator = String.raw` \\ `;
+    latexContent = String.raw`\begin{aligned} ${cleanedLines.join(separator)} \end{aligned}`;
+  } else {
+    latexContent = '';
+  }
+
+  // Block equation using \[...\] delimiters (MathJax display mode)
+  fileNode.append(String.raw`<div class="equation-display" style="${alignStyle}">\[${latexContent}\]</div>`);
 }

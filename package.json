@@ -13,13 +13,36 @@
         "languages": [{
             "id": "slide-ml",
             "aliases": ["JeyaSlides", "slide-ml"],
-            "extensions": [".aml"],
+            "extensions": [".sml"],
             "configuration": "./language-configuration.json"
         }],
         "grammars": [{
             "language": "slide-ml",
             "scopeName": "source.slide-ml",
             "path": "./syntaxes/slide-ml.tmLanguage.json"
+        }],
+        "commands": [{
+            "command": "slide-ml.showPreview",
+            "title": "Open Preview",
+            "category": "SlideML",
+            "icon": "$(open-preview)"
+        }],
+        "menus": {
+            "editor/title": [{
+                "command": "slide-ml.showPreview",
+                "when": "editorLangId == slide-ml",
+                "group": "navigation"
+            }],
+            "commandPalette": [{
+                "command": "slide-ml.showPreview",
+                "when": "editorLangId == slide-ml"
+            }]
+        },
+        "keybindings": [{
+            "command": "slide-ml.showPreview",
+            "key": "ctrl+shift+v",
+            "mac": "cmd+shift+v",
+            "when": "editorLangId == slide-ml"
         }]
     },
     "activationEvents": [
@@ -40,7 +63,9 @@
         "watch": "tsc -b tsconfig.json --watch",
         "lint": "eslint src --ext ts",
         "langium:generate": "langium generate",
-        "langium:watch": "langium generate --watch"
+        "langium:watch": "langium generate --watch",
+        "langium:full-build": "npm run langium:generate && npm run build"
+
     },
     "dependencies": {
         "chevrotain": "^10.4.1",

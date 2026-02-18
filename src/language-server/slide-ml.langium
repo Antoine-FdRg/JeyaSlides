@@ -1,105 +1,342 @@
-grammar SlideMl
-
-entry App:
-    'app' name=ID
-    'initial' 'state' initial=[State:ID]
-    ('use' useSerialMonitor=COMPONENT)?
-    '{'
-        'bricks'
-        bricks+=Brick
-        (bricks+=Brick)*
+grammar SlideML
 
 
-        'states'
-        states+=State
-    ( states+=State)*
-    '}';
+entry Model:
+  (
+      template=Template
+      (presentation=Presentation)?
+    ) | (
+      (template=Template)?
+      presentation=Presentation
+    );
 
-Brick:
-    Actuator
-    | Sensor
-    | LCDBrick
+TemplateSlot:
+  'elements:'
+    ('-' elements+=Element)+
 ;
 
-Actuator:
-    {infer Actuator}
-    'Actuator' name=ID ':' outputPin=INT;
+Template:
+  'template:'
+    'name:' name=ID
+    (defaults=TemplateDefaults)?
+    ('titleTemplate:' titleTemplate=TemplateSlot)?
+    ('bodyTemplate:' bodyTemplate=TemplateSlot)?
+;
 
-Sensor :
-    {infer Sensor}
-    'Sensor' name=ID ':' inputPin=INT;
+TemplateDefaults:
+  'defaults:'
+    (
+      background=TemplateBackground
+    | textStyles=TemplateTextStyles
+    | transition=TemplateTransition
+    )*
+;
 
-State :
-	name=ID '{'
-		(actions+=Action)*
-		transition=Transition
-	'}';
+TemplateTransition:
+  'transition:'
+    'type:' type=TransitionEffect
+    ('duration:' duration=DurationType)?
+;
 
-LCDBrick:
-    {infer LCDBrick}
-    'LCD' name=ID;
+TemplateBackground:
+  'backgroundColor:' color=BackgroundValue
+;
 
-Action :
-    SetAction | SendAction;
+TemplateTextStyles:
+  'textStyles:'
+    (entries+=TemplateTextStyleEntry)+
+;
 
-SetAction:
-    actuator=[Actuator:ID] '<=' value=Signal;
+TemplateTextStyleEntry:
+  key=TextStyleKey ':'
+    ('align:' align=TextAlignment)?
+    (font=Font)?
+;
 
-SendAction:
-    'send' message=STRING
-    | lcd=[LCDBrick:ID] 'displays' lcdMessage=LCDMessage;
+TextStyleKey returns string:
+  'title' | 'subtitle' | 'text';
 
-LCDMessage:
-    parts+=LCDMessagePart ('+' parts+=LCDMessagePart)*;
+Presentation:
+  'presentation:' 
+    ('name:' name=STRING)?
+    ('author:' author=STRING)?
+    ('displaySlideNumber:' displaySlideNumber=BOOLEAN)?
+    ('template:' template=STRING)?
+    "slides:" 
+      slides+=Slide+
+;
 
-LCDMessagePart:
-    ConstantText | BrickValueRef;
+Slide:
+  '-slide:'
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
+    (transition=Transition)?
+    ('-'elements+=Element)+
+;
 
-ConstantText:
-    value=STRING;
+Element:
+  Text | Image | Video | Quiz | Group | Plot;
 
-BrickValueRef:
-    brick=[Brick:ID];
+Group:
+  'group:' '['
+    (style=Style)?
+    (position=Position)?
+    (animation=Animation)?
+    ('-'elements+=Element)+
+  ']'
+;
+
+Text:
+  (Code | Equation | BasicText)
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
+
+Code:
+  'code:' 
+  ('language:' language=STRING)?
+  ('codeAnimation:' codeAnimation=CodeAnimation)?
+  content=STRING
+  ('explanations:' 
+    explanations+=CodeExplanation+)?;
+
+CodeAnimation:
+  ranges+=CodeHighlightRange ('|' ranges+=CodeHighlightRange)*;
+
+CodeHighlightRange:
+  start=NUMBER ('..' end=NUMBER)?;
+
+CodeExplanation:
+  '-' line=NUMBER ":" content=STRING;
+
+Equation:
+  'equation:'
+  (
+    content=STRING |
+    '-' lines+=STRING ('-' lines+=STRING)*
+  )
+  ('equationAnimation:' equationAnimation=EquationAnimation)?
+  ('align:' align=TextAlignment)?;
+
+EquationAnimation:
+  (
+    'enabled' |
+    'steps:' '-' steps+=STRING ('-' steps+=STRING)* |
+    'split:' separator=STRING
+  )
+;
+
+BasicText:
+  (Paragraph | List) ('align:' align=TextAlignment)?;
+
+Paragraph:
+  type=TextType  ':' content=STRING;
+
+List:
+  'list:'   
+    ('ordered:' ordered=BOOLEAN)? 
+    '-'items+=STRING
+    ('-' items+=STRING)*
+;
+
+Image:
+  'image:' link=STRING
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
+
+Video:
+  'video:' link=STRING
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
+
+Quiz:
+  'quiz:'
+    'link:' link=STRING
+    ('joinCode:' joinCode=STRING)?
+    ('joinUrl:' joinUrl=STRING)?
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?
+;
+
+
+Style:
+  'style:'
+    (size=Size)?
+    ('backgroundColor:' backgroundColor=BackgroundValue)?
+    (font=Font)?
+    ('rotation:' rotation=NUMBER)?
+;
+
+Size:
+  'size:' width=SizeValue height=SizeValue;
+
+SizeValue:
+  value=NUMBER('%')? | value='auto';
+
+Font:
+  'font:'
+  (
+    (
+      (name=STRING size=NUMBER?
+      | size=NUMBER name=STRING?)
+      ('color:' color=ColorValue)?
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      ('color:' color=ColorValue)
+      ('transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      )?
+    )
+  | (
+      'transformations:'
+        '-' transformations+=FontTransformation
+        ('-' transformations+=FontTransformation)*
+      ('color:' color=ColorValue)?
+    )
+  )
+;
+
+terminal FontTransformation: 'bold' | 'italic' | 'underline';
+
+Plot:
+  'plot:'
+    'type:' plotType=PlotType
+    'data:' plotData=PlotData
+    ('layout:' plotLayout=PlotLayout)?
+  (style=Style)?
+  (position=Position)?
+  (animation=Animation)?;
+
+PlotType returns string:
+  'scatter' | 'line' | 'bar';
+
+PlotData:
+  'xAxis:' xValues=NumberArray
+  'yAxis:' yValues=NumberArray
+  ('labels:' labels=StringArray)?;
+
+NumberArray:
+  '[' values+=NUMBER (',' values+=NUMBER)* ']';
+
+StringArray:
+  '[' values+=STRING (',' values+=STRING)* ']';
+
+PlotLayout:
+  ('xLabel:' xLabel=STRING)?
+  ('yLabel:' yLabel=STRING)?;
+
+Animation:
+  "animation:" 
+    (
+      (animationType=AnimationType order=NUMBER?) | 
+      (order=NUMBER animationType=AnimationType?)
+    )
+;
+
+terminal AnimationType: 
+  'fade-up' | 'fade-down' | 'fade-left' | 'fade-right' |
+  'fade-in-then-out' | 'current-visible' | 'fade-in-then-semi-out' |
+  'grow' | 'semi-fade-out' | 'shrink' | 'strike' |
+  'highlight-red' | 'highlight-green' | 'highlight-blue' |
+  'highlight-current-red' | 'highlight-current-green' | 'highlight-current-blue';
+
+Position:
+  'position:'(ShorthandPosition | DetailedPosition);
+
+ShorthandPosition:
+  (general=FlatPosition | x=XPosition? y=YPosition?)? ( z=ZPosition)?;
+
+FlatPosition returns string:
+  'center';
+
+DetailedPosition:
+  ('x' ':' x=XPosition)?
+  ('y' ':' y=YPosition)?
+  ('z' ':' z=ZPosition)?;
+
+XPosition:
+  CoordinatePosition | EnumXPosition;
+YPosition:
+  CoordinatePosition | EnumYPosition;
+ZPosition:
+  CoordinatePosition | EnumZPosition;
+
+CoordinatePosition:
+  value=NUMBER;
+
+EnumXPosition returns string:
+  'left' | 'center' | 'right';
+EnumYPosition returns string:
+  'top' | 'center' | 'bottom';
+EnumZPosition returns string:
+  'front' | 'back';
+
 
 Transition:
-	BooleanExpression '=>' (next=[State:ID] | 'error' errorCode=INT);
+  'transition:' 
+    'type:' type=TransitionEffect 
+    ('duration:' duration=DurationType)?;
 
-BooleanExpression:
-    SignalTransition | TemporalTransition | MessageTransition | ConditionList;
+terminal TransitionEffect: /(none|fade|slide|convex|concave|zoom)(-in|-out)?/;
+
+TextAlignment returns string:
+  'left' | 'center' | 'right' | 'justify';
+TextType returns string:
+  'title' | 'subtitle' | 'text';
+
+DurationType returns string:
+  'fast' | 'default' | 'slow';
+
+ColorValue returns string:
+  HexColor | STRING
+;
+
+BackgroundValue:
+  SolidColor | GradientColor
+;
+
+SolidColor:
+  color=ColorValue
+;
+
+GradientColor:
+  'gradient'
+    from=ColorValue
+    to=ColorValue
+    (modifier=GradientKeywordModifier | angle=GradientAngle)?
+;
+
+GradientKeywordModifier returns string:
+  GradientDirection | 'radial'
+;
+
+GradientDirection returns string:
+  'horizontal' | 'vertical' | 'diagonal'
+;
+
+GradientAngle:
+  angle=NUMBER 'deg'
+;
+
+terminal HexColor: /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
+
+terminal BOOLEAN: /true|false/;
+terminal NUMBER: /-?\d+(\.\d+)?/;
+terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;
+terminal STRING: /"([^"\\]*(\\.[^"\\]*)*)"/;
 
 
-ConditionList infers BooleanExpression:
-    connector=Logic '{'
-        transitions+=BooleanExpression
-        (transitions+=BooleanExpression)+
-    '}';
 
-TemporalTransition:
-	'after' delay=INT 'ms';
-
-SignalTransition:
-    sensor=[Sensor:ID] 'is' value=Signal;
-
-MessageTransition:
-    'receives' (pattern=STRING | any?='any');
-
-Signal:
-	value=(HIGH | LOW);
-Logic:
-	value=(AND | OR);
-
-terminal HIGH: 'HIGH';
-terminal LOW: 'LOW';
-
-terminal AND: 'AND';
-terminal OR: 'OR';
-
-terminal COMPONENT: 'SerialMonitor';
-
-hidden terminal WS: /\s+/;
-terminal ID: /[_a-zA-Z][\w_]*/;
-terminal INT returns number: /[0-9]+/;
-terminal STRING: /"[^"]*"|'[^']*'/;
-
-hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
+hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
+hidden terminal WS: /[ \t\r\n\uFEFF\u00A0]+/;

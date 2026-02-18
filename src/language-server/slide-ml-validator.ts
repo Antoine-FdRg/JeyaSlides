@@ -1,82 +1,148 @@
-import { ValidationAcceptor, ValidationChecks } from 'langium';
-import {
-    SlideMLAstType,
-    App,
-    LCDMessage,
-    ConstantText,
-    BrickValueRef,
-} from './generated/ast';
+import { AstNode, AstTypeList, ValidationAcceptor, ValidationChecks } from 'langium';
+import { Font, JeyaSlidesAstType, Plot, Template } from './generated/ast';
 import type { SlideMLServices } from './slide-ml-module';
 
-/**
- * Register custom validation checks.
- */
 export function registerValidationChecks(services: SlideMLServices) {
-    const registry = services.validation.ValidationRegistry;
-    const validator = services.validation.SlideMLValidator;
-    const checks: ValidationChecks<SlideMLAstType> = {
-        App: validator.checkNothing,
-        LCDMessage: validator.checkLCDMessage
-    };
-    registry.register(checks, validator);
+  const registry = services.validation.ValidationRegistry;
+  const validator = services.validation.SlideMLValidator;
+
+  const checks: ValidationChecks<AstTypeList<JeyaSlidesAstType>> = {
+    Template: validator.validateTemplate,
+    Presentation: validator.validate,
+    Slide: validator.validate,
+    Element: validator.validate,
+    Plot: validator.validatePlot,
+    Font: validator.validateNotEmpty,
+    Style: validator.validateNotEmpty,
+    Position: validator.validateNotEmpty,
+    XPosition: validator.validatePosition,
+    YPosition: validator.validatePosition,
+    Size: validator.validateUsefullSize,
+    Transition: validator.validateTransition.bind(validator),
+  };
+
+  registry.register(checks, validator);
 }
 
-/**
- * Implementation of custom validations.
- */
 export class SlideMLValidator {
+  validate(node: AstNode, accept: ValidationAcceptor): void {
+    const $cstNode = node.$cstNode;
+    if (!$cstNode) return;
+  }
 
-    checkNothing(app: App, accept: ValidationAcceptor): void {
-        if (app.name) {
-            const firstChar = app.name.substring(0, 1);
-            if (firstChar.toUpperCase() !== firstChar) {
-                accept('warning', 'App name should start with a capital.', { node: app, property: 'name' });
-            }
-        }
+  validateNotEmpty(node: AstNode, accept: ValidationAcceptor): void {
+    if (!node.$cstNode) return;
+    if (node.$type === 'Font') {
+      const font = node as Font;
+
+      const isEmpty =
+        font.name === undefined &&
+        font.size === undefined &&
+        font.color === undefined &&
+        (!font.transformations || font.transformations.length === 0);
+
+      if (isEmpty) {
+        accept('error', `La balise font ne doit pas être vide.`, { node });
+      }
+      return;
     }
 
-    /**
-     * Validation statique du message LCD :
-     * - ASCII imprimable uniquement
-     * - taille totale <= 32 (écran 16x2)
-     */
-    checkLCDMessage(msg: LCDMessage, accept: ValidationAcceptor): void {
-        const MAX = 32;
-        let length = 0;
+    const fieldName = node.$type;
+    const textAfterColon = node.$cstNode.text.split(':')[1]?.trim();
 
-        for (const part of msg.parts) {
-            if (part.$type === 'ConstantText') {
-                const raw = (part as ConstantText).value;
-                const v = raw.substring(1, raw.length - 1);
-                if (!/^[\x20-\x7E]*$/.test(v)) {
-                    accept(
-                        'error',
-                        'Le texte LCD contient des caracteres non ASCII imprimables.',
-                        { node: part, property: 'value' }
-                    );
-                }
-                length += v.length;
-            }
-            if (part.$type === 'BrickValueRef') {
-                const brick = (part as BrickValueRef).brick?.ref;
-                if (!brick) continue;
-                if (brick.$type === 'Sensor') {
-                    length += 4; // HIGH ou LOW
-                }
-                else if (brick.$type === 'Actuator') {
-                    length += 3; // ON ou OFF
-                }
-                else {
-                    length += 4; // fallback
-                }
-            }
-        }
-        if (length > MAX) {
-            accept(
-                'error',
-                `Message LCD trop long (${length} caracteres, max = ${MAX}).`,
-                { node: msg }
-            );
-        }
+    if (textAfterColon === '') {
+      accept('error', `La balise ${fieldName} ne doit pas être vide.`, { node });
     }
+  }
+
+  validatePosition(node: AstNode, accept: ValidationAcceptor): void {
+    if (node.$cstNode) {
+      const text = node.$cstNode.text.trim();
+      const value = parseFloat(text);
+      if (value < 0) {
+        accept('warning', `La position est négative, l'élément risque d'être invisible.`, { node });
+        return;
+      }
+
+      if (value > 100) {
+        accept('warning', `La position est supérieure à 100, l'élément risque d'être invisible.`, { node });
+        return;
+      }
+    }
+  }
+
+  validateTemplate(node: AstNode, accept: ValidationAcceptor): void {
+    const template = node as Template;
+
+    const hasTitle = !!template.titleTemplate;
+    const hasBody = !!template.bodyTemplate;
+    const hasTextStyles = !!template.defaults?.textStyles && template.defaults.textStyles.entries.length > 0;
+
+    if (!hasTitle && !hasBody && !hasTextStyles) {
+      accept('error', 'Un template doit définir au moins un titleTemplate, un bodyTemplate ou des textStyles.', {
+        node: template,
+      });
+    }
+  }
+
+  validateUsefullSize(node: AstNode, accept: ValidationAcceptor): void {
+    const size = node as any;
+    if (size.width && size.height) {
+      const widthIsAuto = typeof size.width.value === 'string' && size.width.value === 'auto';
+      const heightIsAuto = typeof size.height.value === 'string' && size.height.value === 'auto';
+
+      if (widthIsAuto && heightIsAuto) {
+        accept('warning', 'Définir width et height tous les deux à "auto" est inutile.', { node });
+      }
+    }
+  }
+
+  validatePlot(node: AstNode, accept: ValidationAcceptor): void {
+    const plot = node as Plot;
+
+    const data = plot.plotData;
+    if (!data) {
+      accept('error', 'Un plot doit définir un bloc data.', { node });
+      return;
+    }
+
+    const x = data.xValues?.values ?? [];
+    const y = data.yValues?.values ?? [];
+
+    if (x.length === 0) {
+      accept('error', 'Le tableau x du plot ne doit pas être vide.', { node });
+    }
+
+    if (y.length === 0) {
+      accept('error', 'Le tableau y du plot ne doit pas être vide.', { node });
+    }
+
+    if (x.length > 0 && y.length > 0 && x.length !== y.length) {
+      accept('error', `Les tableaux x (${x.length}) et y (${y.length}) doivent avoir la même taille.`, { node });
+    }
+
+    const labels = data.labels?.values;
+    if (labels && labels.length !== x.length) {
+      accept('warning', `Le nombre de labels (${labels.length}) doit correspondre au nombre de points (${x.length}).`, {
+        node,
+      });
+    }
+  }
+
+  validateTransition(node: AstNode, accept: ValidationAcceptor): void {
+    if (!node.$cstNode) return;
+    const t: any = node as any;
+    const val = t.type as string | undefined;
+    if (!val) return;
+
+    const bases = ['none', 'fade', 'slide', 'convex', 'concave', 'zoom'];
+    const suffixes = ['', '-in', '-out'];
+    const allowed = new Set<string>();
+    for (const b of bases) for (const s of suffixes) allowed.add(b + s);
+
+    if (!allowed.has(val)) {
+      const grammarRule = '/(none|fade|slide|convex|concave|zoom)(-in|-out)?/';
+      accept('error', `Transition inconnue : '${val}'. Règle attendue : ${grammarRule}`, { node });
+    }
+  }
 }
